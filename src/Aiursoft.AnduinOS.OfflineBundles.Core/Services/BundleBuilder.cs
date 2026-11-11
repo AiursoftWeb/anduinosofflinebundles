@@ -62,9 +62,9 @@ public sealed class BundleBuilder(Action<string>? progress = null)
                 CheckOperatingSystem(os, profile.ReleaseLine, profile.Suite);
                 await apt.SetStatusAsync(await File.ReadAllTextAsync(baseline.StatusFile, token), token);
                 var stages = new List<StagePlan>();
-                foreach (var stage in profile.Stages)
+                foreach (var (stage, removals) in WithBootstrap(profile.Stages, profile.Bootstrap, profile.AllowedRemovals))
                 {
-                    var changes = await apt.SimulateAsync(stage, profile.AllowedRemovals, token);
+                    var changes = await apt.SimulateAsync(stage, removals, token);
                     foreach (var change in changes.Where(c => c.Action == "install"))
                     {
                         AddPackage(allPackages, new PackageIdentity(change.Name, change.After!, change.Architecture));
@@ -80,6 +80,15 @@ public sealed class BundleBuilder(Action<string>? progress = null)
             var versionMetadata = await apt.CandidateAsync(profile.VersionPackage, token);
             var versionIdentity = DebianControl.Identity(versionMetadata);
             AddPackage(allPackages, versionIdentity);
+            if (profile.Bootstrap != null)
+            {
+                var updater = DebianControl.Identity(await apt.CandidateAsync(profile.Bootstrap.Package, token));
+                if (!await AptWorkspace.CompareAsync(updater.Version, "ge", profile.Bootstrap.MinimumVersion, token))
+                {
+                    throw new InvalidDataException("The source updater is older than the required bootstrap version.");
+                }
+                AddPackage(allPackages, updater);
+            }
             var downloads = Path.Combine(work, "downloads");
             progress?.Invoke($"Downloading {allPackages.Count} packages from the verified indexes.");
             await apt.DownloadAsync(allPackages.Values.OrderBy(p => p.Key, StringComparer.Ordinal), downloads, token);
@@ -129,7 +138,7 @@ public sealed class BundleBuilder(Action<string>? progress = null)
             var identityText = BundleJson.Write(new
             {
                 profile.ReleaseLine, profile.Suite, profile.Architecture, TargetVersion = targetVersion,
-                profile.VersionPackage, profile.VersionFile, profile.Stages,
+                profile.VersionPackage, profile.VersionFile, profile.Stages, profile.Bootstrap,
                 AllowedRemovals = profile.AllowedRemovals.Order(StringComparer.Ordinal).ToArray(),
                 Packages = packages,
                 Baselines = baselinePlans
@@ -140,7 +149,10 @@ public sealed class BundleBuilder(Action<string>? progress = null)
                 ReleaseLine = profile.ReleaseLine, Suite = profile.Suite, Architecture = profile.Architecture,
                 TargetVersion = targetVersion, BatchId = batchId, CreatedUtc = created,
                 VersionPackage = profile.VersionPackage, VersionFile = profile.VersionFile,
-                Stages = profile.Stages, AllowedRemovals = profile.AllowedRemovals,
+                Stages = profile.Stages, AllowedRemovals = profile.AllowedRemovals, Bootstrap = profile.Bootstrap,
+                RequiredFeatures = profile.Bootstrap == null
+                    ? ["apt-repository-v1", "sequential-apt-plans-v1"]
+                    : ["apt-repository-v1", "sequential-apt-plans-v1", "updater-bootstrap-v1"],
                 Baselines = baselinePlans, Packages = packages, RequiredInstalledTargets = targets,
                 SourceIndexes = sourceIndexes, Files = files
             };
@@ -201,6 +213,20 @@ public sealed class BundleBuilder(Action<string>? progress = null)
         finally
         {
             Directory.Delete(work, recursive: true);
+        }
+    }
+
+    public static IEnumerable<(UpdateStage Stage, IEnumerable<string> Removals)> WithBootstrap(
+        IEnumerable<UpdateStage> stages, UpdaterBootstrap? bootstrap, IReadOnlyCollection<string> allowedRemovals)
+    {
+        if (bootstrap != null)
+        {
+            // Bootstrap cannot borrow the later system migration's removal permission.
+            yield return (new UpdateStage { Operation = "install", Packages = [bootstrap.Package] }, []);
+        }
+        foreach (var stage in stages)
+        {
+            yield return (stage, allowedRemovals);
         }
     }
 

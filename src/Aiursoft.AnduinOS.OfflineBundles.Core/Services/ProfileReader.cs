@@ -38,6 +38,7 @@ public static partial class ProfileReader
         {
             throw new InvalidDataException("Unsupported profile version, release line, suite or architecture.");
         }
+        ValidateBootstrap(profile.Bootstrap);
         ValidatePackage(profile.VersionPackage);
         ValidatePath(profile.VersionFile);
         ValidateStages(profile.Stages, profile.AllowedRemovals);
@@ -89,6 +90,17 @@ public static partial class ProfileReader
         foreach (var package in removals)
         {
             ValidatePackage(package);
+        }
+    }
+
+    public static void ValidateBootstrap(UpdaterBootstrap? bootstrap)
+    {
+        if (bootstrap == null) return;
+        if (bootstrap.SchemaVersion != 1 || bootstrap.Package != "anduinos-offline-updater" ||
+            string.IsNullOrEmpty(bootstrap.MinimumVersion) || !char.IsAsciiDigit(bootstrap.MinimumVersion[0]) ||
+            bootstrap.MinimumVersion.Any(c => !char.IsAsciiLetterOrDigit(c) && c is not ('.' or '+' or ':' or '~' or '-')))
+        {
+            throw new InvalidDataException("Unsupported updater bootstrap identity or version.");
         }
     }
 

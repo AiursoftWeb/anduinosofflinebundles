@@ -53,3 +53,51 @@ Package comparison uses `dpkg --compare-versions`. Unapproved removals and downg
 `additional_staging_bytes` describes unpacked bundle storage only. The installer must separately inspect filesystem capacity, package expansion, snapshots, local APT policy, concurrent transactions and required restarts. No snapshot support is a valid future installation mode, not an automatic refusal.
 
 The archive format contains no payment token or entitlement check. Compatibility and package safety checks apply equally to all users.
+
+
+## Updater bootstrap (optional v1 extension)
+
+Existing v1 bundles remain valid. A bundle that needs a minimum updater version
+adds `updater-bootstrap-v1` to `required_features` and a signed declaration:
+
+```json
+"bootstrap": {
+  "schema_version": 1,
+  "package": "anduinos-offline-updater",
+  "minimum_version": "2.1.0-2"
+}
+```
+
+The package name is fixed; arbitrary bootstrap commands/scripts are not accepted.
+Exactly one updater candidate must appear in the authenticated package inventory,
+and its Debian version must meet the minimum. The builder profile accepts the
+same `bootstrap` object. It resolves an updater installation before the system
+stages for every supported baseline and includes the candidate plus its required
+dependencies. Bootstrap identity participates in batch identity; source inputs,
+repository signatures and normal closure checks still apply. Omitting bootstrap
+does not change the original batch-identity calculation.
+
+`required_features` describes the **stable envelope**: an unknown feature still
+rejects the entire archive. `required_installer_features` is an optional list
+(default empty) of additional **system-plan** capabilities. Nonempty lists require
+a bootstrap declaration. They can be authenticated and displayed without running
+the system plan; this builder version does not produce or simulate future
+installer semantics. Unknown installer capabilities must never be ignored when
+planning/executing the OS transaction. An older reader without
+`updater-bootstrap-v1` refuses the extension safely.
+
+A client below the signed minimum may preview only the fixed updater installation
+and its local dependencies. Bootstrap must refuse all removals (including the
+later system plan's removal exceptions), downgrades,
+changed held packages, missing dependencies and incompatible systems. After a
+future installer completes this transaction and releases APT locks, a new process
+must reverify the archive and recompute the OS plan. It must obtain a new
+confirmation if the remaining plan differs materially. If the running updater
+already meets the minimum but still lacks a required capability, stop with an
+explicit compatibility error; do not loop or silently execute unknown steps.
+
+Authentication is not execution approval. `verify` can authenticate an envelope
+with unknown installer capabilities, while `inspect` reports that it cannot
+simulate those capabilities. No current build-tool command installs packages.
+The first desktop client likewise provides read-only verification/preview;
+actual bootstrap execution and hand-off require the installation milestone.

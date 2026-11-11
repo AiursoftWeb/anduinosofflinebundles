@@ -216,6 +216,70 @@ public class BundleWorkflowTests
         await Assert.ThrowsAsync<Exception>(() => BundleArchive.VerifyAsync(file, _fixture.Keyring));
     }
 
+    [TestMethod]
+    public async Task BootstrapIncludesUpdaterDependenciesAndRemainsAnAuthenticatedBoundary()
+    {
+        await _fixture.AddPackageAsync("anduinos-offline-updater", "2.1.0-2", "bootstrap-library (>= 2)");
+        await _fixture.AddPackageAsync("bootstrap-library", "2");
+        await _fixture.PublishRepositoryAsync();
+        var plain = await BuildAsync();
+        var profile = _fixture.Profile with { Bootstrap = new UpdaterBootstrap { MinimumVersion = "2.1.0-2" } };
+        var result = await new BundleBuilder().BuildAsync(profile, _fixture.Output, _fixture.Signing);
+        var root = Path.Combine(_fixture.Root, "bootstrap-extracted");
+        var verified = await BundleArchive.VerifyAsync(result.File, _fixture.Keyring, root);
+        Assert.AreNotEqual(plain.BatchId, result.BatchId);
+        Assert.Contains("updater-bootstrap-v1", verified.Manifest.RequiredFeatures);
+        Assert.IsTrue(verified.Manifest.Packages.Any(p => p.Identity.Name == "bootstrap-library"));
+        foreach (var baseline in profile.Baselines)
+        {
+            var preview = await BundlePreview.PreviewAsync(result.File, _fixture.Keyring, baseline.StatusFile, baseline.OsReleaseFile);
+            Assert.IsEmpty(preview.Blockers);
+            Assert.IsTrue(preview.Stages[0].Changes.Any(c => c.Name == "anduinos-offline-updater"));
+        }
+        var future = verified.Manifest with { RequiredInstallerFeatures = ["future-installer-v2"] };
+        var futureFile = await ResignAsync(root, future, "future-installer.atgz");
+        await BundleArchive.VerifyAsync(futureFile, _fixture.Keyring);
+        var b = profile.Baselines[0];
+        var rejected = await BundlePreview.PreviewAsync(futureFile, _fixture.Keyring, b.StatusFile, b.OsReleaseFile);
+        Assert.AreEqual("blocked", rejected.State);
+        Assert.IsEmpty(rejected.Stages);
+        var invalid = verified.Manifest with { Bootstrap = new UpdaterBootstrap { MinimumVersion = "99" } };
+        var invalidFile = await ResignAsync(root, invalid, "too-old-updater.atgz");
+        await Assert.ThrowsExactlyAsync<InvalidDataException>(() => BundleArchive.VerifyAsync(invalidFile, _fixture.Keyring));
+        Assert.ThrowsExactly<InvalidDataException>(() => BundleArchive.ValidateManifest(verified.Manifest with
+        {
+            Bootstrap = new UpdaterBootstrap { Package = "arbitrary-command", MinimumVersion = "1" }
+        }));
+        // Explicit opt-in exports real builder output for cross-language acceptance,
+        // never keys or artifacts to the source tree or normal CI output.
+        if (Environment.GetEnvironmentVariable("OFFLINE_CONTRACT_EXPORT") is { Length: > 0 } export)
+        {
+            Directory.CreateDirectory(export);
+            foreach (var (file, name) in new[] { (plain.File, "legacy.atgz"), (result.File, "bootstrap.atgz"),
+                         (futureFile, "future.atgz"), (invalidFile, "invalid-minimum.atgz"), (_fixture.Keyring, "trusted.gpg"),
+                         (b.StatusFile, "baseline.status"), (b.OsReleaseFile, "baseline.os-release") })
+            {
+                File.Copy(file, Path.Combine(export, name), overwrite: true);
+            }
+        }
+    }
+
+    [TestMethod]
+    public async Task BootstrapCannotUseTheSystemPlansRemovalExceptions()
+    {
+        await _fixture.AddPackageAsync("anduinos-offline-updater", "2.1.0-2", conflicts: "user-editor");
+        await _fixture.PublishRepositoryAsync();
+        var baseline = _fixture.CreateBaseline("user-editor", "2.0.0", "2.0.0-1", "1",
+            BundleFixture.Status("user-editor", "1"));
+        var profile = _fixture.Profile with
+        {
+            Bootstrap = new UpdaterBootstrap { MinimumVersion = "2.1.0-2" },
+            Baselines = [baseline], AllowedRemovals = ["user-editor"]
+        };
+        await Assert.ThrowsExactlyAsync<InvalidDataException>(() =>
+            new BundleBuilder().BuildAsync(profile, _fixture.Output, _fixture.Signing));
+    }
+
     private async Task<string> ResignAsync(string directory, BundleManifest manifest, string name)
     {
         var path = Path.Combine(directory, "manifest.json");

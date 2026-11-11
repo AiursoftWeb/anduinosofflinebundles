@@ -54,7 +54,7 @@ public static class BundleArchive
             await File.WriteAllBytesAsync(manifestPath, manifestText, token);
             await File.WriteAllBytesAsync(signaturePath, signature, token);
             var fingerprint = await BundleSigning.VerifyAsync(manifestPath, signaturePath, trustedKeyring, token);
-            var manifest = BundleJson.Read<BundleManifest>(Encoding.UTF8.GetString(manifestText));
+            var manifest = BundleJson.Read<BundleManifest>(new UTF8Encoding(false, true).GetString(manifestText));
             ValidateManifest(manifest);
             if (extractionDirectory != null &&
                 new DriveInfo(Path.GetFullPath(extractionDirectory)).AvailableFreeSpace < manifest.Files.Values.Sum(f => f.Size))
@@ -121,6 +121,14 @@ public static class BundleArchive
                 }
             }
             await ValidateRepositoryAsync(metadata, manifest, fingerprint, trustedKeyring, token);
+            if (manifest.Bootstrap != null)
+            {
+                var updater = manifest.Packages.Single(p => p.Identity.Name == manifest.Bootstrap.Package);
+                if (!await AptWorkspace.CompareAsync(updater.Identity.Version, "ge", manifest.Bootstrap.MinimumVersion, token))
+                {
+                    throw new InvalidDataException("The bundled updater cannot meet its declared minimum version.");
+                }
+            }
             return new VerificationResult(manifest, fingerprint, total);
         }
         finally
@@ -133,7 +141,7 @@ public static class BundleArchive
     {
         if (manifest.FormatVersion != 1 || manifest.Product != "AnduinOS" ||
             manifest.Architecture is not ("amd64" or "arm64") ||
-            manifest.RequiredFeatures.Any(f => f is not ("apt-repository-v1" or "sequential-apt-plans-v1")) ||
+            manifest.RequiredFeatures.Any(f => f is not ("apt-repository-v1" or "sequential-apt-plans-v1" or "updater-bootstrap-v1")) ||
             !manifest.RequiredFeatures.Contains("apt-repository-v1") || !manifest.RequiredFeatures.Contains("sequential-apt-plans-v1") ||
             manifest.Files.Count > 100000 || manifest.Packages.Count == 0 || manifest.Baselines.Count == 0)
         {
@@ -150,7 +158,25 @@ public static class BundleArchive
         {
             ["ID"] = "anduinos", ["VERSION_ID"] = manifest.TargetVersion, ["UBUNTU_CODENAME"] = manifest.Suite
         }, manifest.ReleaseLine, manifest.Suite);
-        ProfileReader.ValidateStages(manifest.Stages, manifest.AllowedRemovals);
+        ProfileReader.ValidateBootstrap(manifest.Bootstrap);
+        if (manifest.RequiredFeatures.Contains("updater-bootstrap-v1") != (manifest.Bootstrap != null) ||
+            manifest.RequiredInstallerFeatures.Count > 32 ||
+            manifest.RequiredInstallerFeatures.Any(f => f.Length is 0 or > 128 || f.Any(c => !char.IsAsciiLetterOrDigit(c) && c != '-')) ||
+            manifest.RequiredInstallerFeatures.Distinct().Count() != manifest.RequiredInstallerFeatures.Count ||
+            manifest.RequiredInstallerFeatures.Count != 0 && manifest.Bootstrap == null)
+        {
+            throw new InvalidDataException("Invalid bootstrap capability declaration.");
+        }
+        // Installer capabilities are separate from the stable authenticated envelope.
+        // Unknown system-plan semantics may be read, but never executed by this version.
+        if (manifest.RequiredInstallerFeatures.Count == 0)
+        {
+            ProfileReader.ValidateStages(manifest.Stages, manifest.AllowedRemovals);
+        }
+        else if (manifest.Stages.Count is 0 or > 16)
+        {
+            throw new InvalidDataException("Invalid bounded future installer plan.");
+        }
         ProfileReader.ValidatePackage(manifest.VersionPackage);
         ProfileReader.ValidatePath(manifest.VersionFile);
         var packageKeys = new HashSet<string>(StringComparer.Ordinal);
@@ -163,6 +189,10 @@ public static class BundleArchive
             {
                 throw new InvalidDataException("Invalid or conflicting package manifest entry.");
             }
+        }
+        if (manifest.Bootstrap != null && !manifest.Packages.Any(p => p.Identity.Name == manifest.Bootstrap.Package))
+        {
+            throw new InvalidDataException("The bootstrap updater is missing from the bundle.");
         }
         foreach (var target in manifest.RequiredInstalledTargets)
         {

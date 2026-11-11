@@ -43,15 +43,17 @@ See [the archive contract](atgz-v1.md) for format, signing and compatibility det
 
 ## Build a local tool package
 
-Before the first package is published, build and install it from the repository root:
+To build and install the current source locally, run from the repository root:
 
 ```sh
 dotnet build -c Release -p:GeneratePackageOnBuild=false
 dotnet test --no-restore
 dotnet pack -c Release --no-build --output ./dist/packages
 dotnet tool install Aiursoft.AnduinOS.OfflineBundles \
-  --tool-path ./dist/tools --add-source ./dist/packages --version 10.0.0
+  --tool-path ./dist/tools --add-source ./dist/packages --version 10.0.2
 ./dist/tools/anduinos-offline-bundles --help
 ```
 
 The tool package contains the internal Core assembly; Core is not a separate NuGet product.
+
+Core is an internal assembly. Keep it without an independent `Version` property: NugetNinja treats versioned library projects as separately published packages. The CLI owns the tool version and includes Core in its package.

@@ -1,27 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Library</OutputType>
-    <Version>10.0.1</Version>
     <TargetFramework>net10.0</TargetFramework>
     <AssemblyName>Aiursoft.AnduinOS.OfflineBundles.Core</AssemblyName>
     <RootNamespace>Aiursoft.AnduinOS.OfflineBundles.Core</RootNamespace>
     <IsTestProject>false</IsTestProject>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <IsPackable>true</IsPackable>
+    <IsPackable>false</IsPackable>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <Company>Aiursoft</Company>
-    <Product>Core</Product>
-    <Description>Nuget package of 'Core' provided by Aiursoft</Description>
-    <PackageId>Aiursoft.AnduinOS.OfflineBundles.Core</PackageId>
-    <PackageTags>nuget package dotnet csproj dependencies</PackageTags>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageProjectUrl>https://gitlab.aiursoft.com/aiursoft/anduinosofflinebundles</PackageProjectUrl>
-    <RepositoryType>git</RepositoryType>
-    <RepositoryUrl>https://gitlab.aiursoft.com/aiursoft/anduinosofflinebundles.git</RepositoryUrl>
-    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
-  <ItemGroup>
-    <None Include="../../README.md" Pack="true" PackagePath="." />
-  </ItemGroup>
 </Project>

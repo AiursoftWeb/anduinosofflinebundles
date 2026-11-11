@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <Version>10.0.0</Version>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>anduinos-offline-bundles</AssemblyName>
+    <RootNamespace>Aiursoft.AnduinOS.OfflineBundles</RootNamespace>
+    <IsTestProject>false</IsTestProject>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <IsPackable>true</IsPackable>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>anduinos-offline-bundles</ToolCommandName>
+    <SelfContained>false</SelfContained>
+    <PublishTrimmed>false</PublishTrimmed>
+    <PublishReadyToRun>false</PublishReadyToRun>
+    <PublishSingleFile>false</PublishSingleFile>
+    <Company>Aiursoft</Company>
+    <Product>AnduinOS Offline Bundles</Product>
+    <Authors>Aiursoft</Authors>
+    <Description>Build and verify cumulative offline APT update bundles for AnduinOS.</Description>
+    <PackageId>Aiursoft.AnduinOS.OfflineBundles</PackageId>
+    <PackageTags>cli dotnet anduinos apt offline-update</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://gitlab.aiursoft.com/aiursoft/anduinosofflinebundles</PackageProjectUrl>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://gitlab.aiursoft.com/aiursoft/anduinosofflinebundles</RepositoryUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Aiursoft.AnduinOS.OfflineBundles.Core/Aiursoft.AnduinOS.OfflineBundles.Core.csproj" />
+    <PackageReference Include="Aiursoft.CommandFramework" Version="10.0.18" />
+    <None Include="../../README.md" Pack="true" PackagePath="." />
+  </ItemGroup>
+</Project>

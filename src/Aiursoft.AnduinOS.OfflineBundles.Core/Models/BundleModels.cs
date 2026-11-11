@@ -17,6 +17,16 @@ public sealed record BuildProfile
     public required List<BaselineDefinition> Baselines { get; init; }
     public List<UpdateStage> Stages { get; init; } = [new() { Operation = "dist-upgrade" }];
     public List<string> AllowedRemovals { get; init; } = [];
+    public UpdaterBootstrap? Bootstrap { get; init; }
+}
+
+public sealed record UpdaterBootstrap
+{
+    [JsonRequired]
+    public int SchemaVersion { get; init; } = 1;
+    [JsonRequired]
+    public string Package { get; init; } = "anduinos-offline-updater";
+    public required string MinimumVersion { get; init; }
 }
 
 public sealed record SourceDefinition
@@ -54,7 +64,9 @@ public sealed record BundlePackage(PackageIdentity Identity, string Path, FileDi
 
 public sealed record BundleManifest
 {
+    [JsonRequired]
     public int FormatVersion { get; init; } = 1;
+    [JsonRequired]
     public string Product { get; init; } = "AnduinOS";
     public required string ReleaseLine { get; init; }
     public required string Suite { get; init; }
@@ -62,7 +74,10 @@ public sealed record BundleManifest
     public required string TargetVersion { get; init; }
     public required string BatchId { get; init; }
     public required DateTimeOffset CreatedUtc { get; init; }
+    [JsonRequired]
     public List<string> RequiredFeatures { get; init; } = ["apt-repository-v1", "sequential-apt-plans-v1"];
+    public UpdaterBootstrap? Bootstrap { get; init; }
+    public IReadOnlyList<string> RequiredInstallerFeatures { get; init; } = [];
     public required string VersionPackage { get; init; }
     public required string VersionFile { get; init; }
     public required List<UpdateStage> Stages { get; init; }

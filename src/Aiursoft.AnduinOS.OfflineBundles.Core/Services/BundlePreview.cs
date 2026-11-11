@@ -46,9 +46,14 @@ public static class BundlePreview
                 {
                     throw new InvalidDataException("This bundle targets an older OS version; downgrade refused.");
                 }
-                foreach (var stage in manifest.Stages)
+                if (manifest.RequiredInstallerFeatures.Count != 0)
                 {
-                    var changes = await apt.SimulateAsync(stage, manifest.AllowedRemovals, token);
+                    throw new InvalidDataException("This build tool cannot simulate the required installer capabilities: " +
+                        string.Join(", ", manifest.RequiredInstallerFeatures));
+                }
+                foreach (var (stage, removals) in BundleBuilder.WithBootstrap(manifest.Stages, manifest.Bootstrap, manifest.AllowedRemovals))
+                {
+                    var changes = await apt.SimulateAsync(stage, removals, token);
                     stages.Add(new StagePlan(stage, changes));
                     await apt.AdvanceAsync(changes, token);
                 }

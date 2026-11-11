@@ -50,7 +50,7 @@ dotnet build -c Release -p:GeneratePackageOnBuild=false
 dotnet test --no-restore
 dotnet pack -c Release --no-build --output ./dist/packages
 dotnet tool install Aiursoft.AnduinOS.OfflineBundles \
-  --tool-path ./dist/tools --add-source ./dist/packages --version 10.0.2
+  --tool-path ./dist/tools --add-source ./dist/packages --version 10.0.3
 ./dist/tools/anduinos-offline-bundles --help
 ```
 

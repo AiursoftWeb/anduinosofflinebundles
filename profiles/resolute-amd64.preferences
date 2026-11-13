@@ -1,0 +1,8 @@
+# Match the installed AnduinOS APT policy. Downgrades are still refused by the builder.
+Package: *
+Pin: release o=Aiursoft Apkg
+Pin-Priority: 1001
+
+Package: *
+Pin: origin "packages.anduinos.com"
+Pin-Priority: 1001

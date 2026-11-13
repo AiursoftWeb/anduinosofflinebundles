@@ -56,9 +56,12 @@ public sealed partial class AptWorkspace
         _environment = new Dictionary<string, string?> { ["APT_CONFIG"] = configuration };
     }
 
-    public async Task SetSourcesAsync(IEnumerable<SourceDefinition> sources, CancellationToken token)
+    public async Task SetSourcesAsync(IEnumerable<SourceDefinition> sources, CancellationToken token,
+        string? preferencesFile = null)
     {
         _metadata.Clear();
+        await File.WriteAllTextAsync(Path.Combine(_root, "etc/preferences"),
+            preferencesFile == null ? string.Empty : await File.ReadAllTextAsync(preferencesFile, token), token);
         var builder = new StringBuilder();
         var index = 0;
         foreach (var source in sources)

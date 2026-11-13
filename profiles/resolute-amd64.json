@@ -1,0 +1,46 @@
+{
+  "format_version": 1,
+  "release_line": "2.0",
+  "suite": "resolute",
+  "architecture": "amd64",
+  "version_package": "base-files",
+  "version_file": "usr/lib/os-release",
+  "preferences_file": "resolute-amd64.preferences",
+  "sources": [
+    {
+      "uri": "https://archive.ubuntu.com/ubuntu/",
+      "suites": ["resolute", "resolute-updates", "resolute-backports"],
+      "components": ["main", "restricted", "universe", "multiverse"],
+      "keyring": "keys/ubuntu-archive-keyring.gpg"
+    },
+    {
+      "uri": "https://security.ubuntu.com/ubuntu/",
+      "suites": ["resolute-security"],
+      "components": ["main", "restricted", "universe", "multiverse"],
+      "keyring": "keys/ubuntu-archive-keyring.gpg"
+    },
+    {
+      "uri": "https://packages.anduinos.com/artifacts/anduinos/",
+      "suites": ["resolute-addon", "resolute-webapps"],
+      "components": ["main"],
+      "keyring": "keys/anduinos-archive-keyring.gpg"
+    }
+  ],
+  "baselines": [
+    { "name": "original200", "status_file": "baselines/2.0.0.status", "os_release_file": "baselines/2.0.0.os-release" },
+    { "name": "intermediate204", "status_file": "baselines/2.0.4.status", "os_release_file": "baselines/2.0.4.os-release" }
+  ],
+  "stages": [
+    { "operation": "install", "packages": ["anduinos-core-system", "plymouth-anduinos"] },
+    { "operation": "dist-upgrade", "packages": [] }
+  ],
+  "allowed_removals": [
+    "casper",
+    "cryptsetup-initramfs",
+    "initramfs-tools",
+    "initramfs-tools-core",
+    "initramfs-tools-bin",
+    "finalrd",
+    "busybox-initramfs"
+  ]
+}

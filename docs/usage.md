@@ -2,6 +2,8 @@
 
 Supply a reviewed build profile, baseline package databases and externally trusted public keys. See [the example profile](../profiles/example-2.0-amd64.json) and [profile preparation](build-profiles.md).
 
+For official Resolute/amd64 updates, see [the release profile and input layout](release-builds.md). Add `--inputs /path/to/inputs` to keep baseline files and source keys separate from the checkout. Target versions are read from signed package metadata; there is no manually maintained target-version argument.
+
 ```sh
 anduinos-offline-bundles build \
   --profile profiles/example-2.0-amd64.json --output ./dist/bundles \
@@ -50,7 +52,7 @@ dotnet build -c Release -p:GeneratePackageOnBuild=false
 dotnet test --no-restore
 dotnet pack -c Release --no-build --output ./dist/packages
 dotnet tool install Aiursoft.AnduinOS.OfflineBundles \
-  --tool-path ./dist/tools --add-source ./dist/packages --version 10.0.3
+  --tool-path ./dist/tools --add-source ./dist/packages --version 10.0.5
 ./dist/tools/anduinos-offline-bundles --help
 ```
 

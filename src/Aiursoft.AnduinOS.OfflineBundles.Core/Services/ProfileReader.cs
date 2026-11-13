@@ -11,22 +11,24 @@ public static partial class ProfileReader
     [GeneratedRegex("^[A-Za-z0-9][A-Za-z0-9._-]*$", RegexOptions.CultureInvariant)]
     private static partial Regex Token();
 
-    public static BuildProfile Read(string path)
+    public static BuildProfile Read(string path, string? inputsDirectory = null)
     {
         path = Path.GetFullPath(path);
         var profile = BundleJson.Read<BuildProfile>(File.ReadAllText(path));
         Validate(profile);
         var directory = Path.GetDirectoryName(path)!;
+        var inputs = inputsDirectory == null ? directory : Path.GetFullPath(inputsDirectory);
         return profile with
         {
+            PreferencesFile = profile.PreferencesFile == null ? null : ExistingFile(profile.PreferencesFile, directory),
             Sources = profile.Sources.Select(source => source with
             {
-                Keyring = ExistingFile(source.Keyring, directory)
+                Keyring = ExistingFile(source.Keyring, inputs)
             }).ToList(),
             Baselines = profile.Baselines.Select(baseline => baseline with
             {
-                StatusFile = ExistingFile(baseline.StatusFile, directory),
-                OsReleaseFile = ExistingFile(baseline.OsReleaseFile, directory)
+                StatusFile = ExistingFile(baseline.StatusFile, inputs),
+                OsReleaseFile = ExistingFile(baseline.OsReleaseFile, inputs)
             }).ToList()
         };
     }

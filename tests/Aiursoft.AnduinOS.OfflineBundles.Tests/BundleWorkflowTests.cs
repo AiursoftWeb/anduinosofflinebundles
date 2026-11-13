@@ -85,6 +85,71 @@ public class BundleWorkflowTests
     }
 
     [TestMethod]
+    public async Task ReviewedSourcePrioritySelectsAnduinOsInsteadOfAHigherUpstreamVersion()
+    {
+        using var upstream = new BundleFixture();
+        await upstream.InitializeAsync();
+        await upstream.AddPackageAsync("anduinos-core-system", "99.0.0-1", "base-library (>= 5)", osVersion: "99.0.0");
+        await upstream.PublishRepositoryAsync();
+        var release = Path.Combine(upstream.Repository, "Release");
+        await File.WriteAllTextAsync(release, (await File.ReadAllTextAsync(release))
+            .Replace("Origin: Offline Fixture", "Origin: Upstream Fixture", StringComparison.Ordinal));
+        await BundleSigning.SignAsync(release, Path.Combine(upstream.Repository, "InRelease"), upstream.Signing, true, default);
+        var profile = _fixture.Profile with { Sources = [.. _fixture.Profile.Sources, .. upstream.Profile.Sources] };
+        await Assert.ThrowsExactlyAsync<InvalidDataException>(() => new BundleBuilder().BuildAsync(profile, _fixture.Output, _fixture.Signing));
+        Assert.IsEmpty(Directory.GetFiles(_fixture.Output, "*.atgz"));
+
+        var preferences = Path.Combine(_fixture.Root, "preferences");
+        await File.WriteAllTextAsync(preferences, "Package: *\nPin: release o=Offline Fixture\nPin-Priority: 1001\n");
+        var result = await new BundleBuilder().BuildAsync(profile with { PreferencesFile = preferences }, _fixture.Output, _fixture.Signing);
+        Assert.AreEqual("2.0.5", result.TargetVersion);
+        Assert.AreEqual(await File.ReadAllTextAsync(preferences), await File.ReadAllTextAsync(Path.Combine(result.File + ".inputs", "preferences")));
+        var recorded = ProfileReader.Read(Path.Combine(result.File + ".inputs", "profile.json"));
+        Assert.AreEqual(Path.Combine(result.File + ".inputs", "preferences"), recorded.PreferencesFile);
+    }
+
+    [TestMethod]
+    public async Task ExternalInputsKeepProfilesPortableAndPreserveDefaultPathResolution()
+    {
+        var profiles = Path.Combine(_fixture.Root, "profiles");
+        Directory.CreateDirectory(profiles);
+        var preferences = Path.Combine(profiles, "policy");
+        await File.WriteAllTextAsync(preferences, "Package: *\nPin: release o=Offline Fixture\nPin-Priority: 1001\n");
+        var profile = _fixture.Profile with
+        {
+            PreferencesFile = "policy",
+            Sources = _fixture.Profile.Sources.Select(s => s with { Keyring = Path.GetRelativePath(_fixture.Root, s.Keyring) }).ToList(),
+            Baselines = _fixture.Profile.Baselines.Select(b => b with
+            {
+                StatusFile = Path.GetRelativePath(_fixture.Root, b.StatusFile),
+                OsReleaseFile = Path.GetRelativePath(_fixture.Root, b.OsReleaseFile)
+            }).ToList()
+        };
+        var path = Path.Combine(profiles, "build.json");
+        await File.WriteAllTextAsync(path, BundleJson.Write(profile));
+        Assert.ThrowsExactly<FileNotFoundException>(() => ProfileReader.Read(path));
+        var loaded = ProfileReader.Read(path, _fixture.Root);
+        Assert.AreEqual(preferences, loaded.PreferencesFile);
+        var built = await new BundleBuilder().BuildAsync(loaded, _fixture.Output, _fixture.Signing);
+        Assert.AreEqual("2.0.5", built.TargetVersion);
+        await File.WriteAllTextAsync(path, BundleJson.Write(_fixture.Profile));
+        Assert.AreEqual(_fixture.Keyring, ProfileReader.Read(path).Sources[0].Keyring);
+    }
+
+    [TestMethod]
+    public async Task MissingUpstreamPayloadDoesNotReplaceThePreviousBundle()
+    {
+        var first = await BuildAsync();
+        await _fixture.AddPackageAsync("base-library", "6");
+        await _fixture.PublishRepositoryAsync();
+        File.Delete(Path.Combine(_fixture.Repository, "base-library_6_all.deb"));
+        await Assert.ThrowsExactlyAsync<InvalidOperationException>(async () => await BuildAsync());
+        Assert.HasCount(1, Directory.GetFiles(_fixture.Output, "*.atgz"));
+        Assert.AreEqual(first.Content.Sha256, await BundleJson.HashAsync(first.File));
+        await BundleArchive.VerifyAsync(first.File, _fixture.Keyring);
+    }
+
+    [TestMethod]
     public async Task SameOsVersionWithNewPackageUpdatesIsANewBatch()
     {
         var first = await BuildAsync();

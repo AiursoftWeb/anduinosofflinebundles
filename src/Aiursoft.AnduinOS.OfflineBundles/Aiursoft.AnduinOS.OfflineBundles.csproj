@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <Version>10.0.5</Version>
+    <Version>10.0.6</Version>
     <TargetFramework>net10.0</TargetFramework>
     <AssemblyName>anduinos-offline-bundles</AssemblyName>
     <RootNamespace>Aiursoft.AnduinOS.OfflineBundles</RootNamespace>
@@ -23,9 +23,9 @@
     <PackageId>Aiursoft.AnduinOS.OfflineBundles</PackageId>
     <PackageTags>cli dotnet anduinos apt offline-update</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageProjectUrl>https://gitlab.aiursoft.com/aiursoft/anduinosofflinebundles</PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/AiursoftWeb/anduinosofflinebundles</PackageProjectUrl>
     <RepositoryType>git</RepositoryType>
-    <RepositoryUrl>https://gitlab.aiursoft.com/aiursoft/anduinosofflinebundles</RepositoryUrl>
+    <RepositoryUrl>https://github.com/AiursoftWeb/anduinosofflinebundles</RepositoryUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
   <ItemGroup>

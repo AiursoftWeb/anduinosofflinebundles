@@ -1,11 +1,11 @@
 # AnduinOS Offline Bundles
 
-[![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](https://gitlab.aiursoft.com/aiursoft/anduinosofflinebundles/-/blob/master/LICENSE)
+[![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/AiursoftWeb/anduinosofflinebundles/blob/master/LICENSE)
 [![Pipeline stat](https://badge-proxy.aiursoft.com/aiursoft/anduinosofflinebundles/badges/master/pipeline.svg)](https://gitlab.aiursoft.com/aiursoft/anduinosofflinebundles/-/pipelines)
 [![Test Coverage](https://badge-proxy.aiursoft.com/aiursoft/anduinosofflinebundles/badges/master/coverage.svg)](https://gitlab.aiursoft.com/aiursoft/anduinosofflinebundles/-/pipelines)
 [![S360 compliance](https://s360.aiursoft.com/badge.svg?project=aiursoft%2Fanduinosofflinebundles)](https://s360.aiursoft.com/SupplyChain?tab=projects&project=aiursoft%2Fanduinosofflinebundles&scope=baseline&ecosystem=all)
 [![NuGet version](https://img.shields.io/nuget/v/Aiursoft.AnduinOS.OfflineBundles.svg)](https://www.nuget.org/packages/Aiursoft.AnduinOS.OfflineBundles/)
-[![Man hours](https://manhours.aiursoft.com/r/gitlab.aiursoft.com/aiursoft/anduinosofflinebundles.svg)](https://manhours.aiursoft.com/r/gitlab.aiursoft.com/aiursoft/anduinosofflinebundles.html)
+[![Man hours](https://manhours.aiursoft.com/r/github.com/AiursoftWeb/anduinosofflinebundles.svg)](https://manhours.aiursoft.com/r/github.com/AiursoftWeb/anduinosofflinebundles.html)
 
 Build signed, cumulative offline updates for AnduinOS. One `.atgz` file brings multiple supported older installations to the same package target.
 
@@ -24,7 +24,7 @@ Once the package is published, install this tool globally:
 dotnet tool install --global Aiursoft.AnduinOS.OfflineBundles
 ```
 
-For an unpublished checkout, use [local package installation](https://gitlab.aiursoft.com/aiursoft/anduinosofflinebundles/-/blob/master/docs/usage.md#build-a-local-tool-package).
+For an unpublished checkout, use [local package installation](https://github.com/AiursoftWeb/anduinosofflinebundles/blob/master/docs/usage.md#build-a-local-tool-package).
 
 ## Usage
 
@@ -34,9 +34,9 @@ Run as an ordinary user. Inspect an update using an independently trusted public
 anduinos-offline-bundles inspect --file update.atgz --keyring trusted-keys.gpg --json
 ```
 
-Use `build` to create bundles and `verify` to check them. See [commands and validation](https://gitlab.aiursoft.com/aiursoft/anduinosofflinebundles/-/blob/master/docs/usage.md), [build profiles](https://gitlab.aiursoft.com/aiursoft/anduinosofflinebundles/-/blob/master/docs/build-profiles.md) and the [archive format](https://gitlab.aiursoft.com/aiursoft/anduinosofflinebundles/-/blob/master/docs/atgz-v1.md).
+Use `build` to create bundles and `verify` to check them. See [commands and validation](https://github.com/AiursoftWeb/anduinosofflinebundles/blob/master/docs/usage.md), [build profiles](https://github.com/AiursoftWeb/anduinosofflinebundles/blob/master/docs/build-profiles.md) and the [archive format](https://github.com/AiursoftWeb/anduinosofflinebundles/blob/master/docs/atgz-v1.md).
 
-For cumulative updates from the official Resolute/amd64 sources, use the [release build profile](https://gitlab.aiursoft.com/aiursoft/anduinosofflinebundles/-/blob/master/docs/release-builds.md). It selects the latest target automatically and keeps baseline files and trusted keys outside the checkout.
+For cumulative updates from the official Resolute/amd64 sources, use the [release build profile](https://github.com/AiursoftWeb/anduinosofflinebundles/blob/master/docs/release-builds.md). It selects the latest target automatically and keeps baseline files and trusted keys outside the checkout.
 
 ## Run locally
 
@@ -59,4 +59,4 @@ Report bugs, propose features or submit a merge request. Use a feature branch an
 
 ## License
 
-[MIT](https://gitlab.aiursoft.com/aiursoft/anduinosofflinebundles/-/blob/master/LICENSE).
+[MIT](https://github.com/AiursoftWeb/anduinosofflinebundles/blob/master/LICENSE).

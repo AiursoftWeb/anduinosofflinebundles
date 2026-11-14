@@ -9,7 +9,7 @@
 
 Build signed, cumulative offline updates for AnduinOS. One `.atgz` file brings multiple supported older installations to the same package target.
 
-The tool builds, verifies and previews updates. It does not install them; the desktop updater is a separate project.
+The tool builds, verifies, previews and publishes updates. It does not install them; the desktop updater is a separate project.
 
 ## Installation
 
@@ -37,6 +37,8 @@ anduinos-offline-bundles inspect --file update.atgz --keyring trusted-keys.gpg -
 Use `build` to create bundles and `verify` to check them. See [commands and validation](https://github.com/AiursoftWeb/anduinosofflinebundles/blob/master/docs/usage.md), [build profiles](https://github.com/AiursoftWeb/anduinosofflinebundles/blob/master/docs/build-profiles.md) and the [archive format](https://github.com/AiursoftWeb/anduinosofflinebundles/blob/master/docs/atgz-v1.md).
 
 For cumulative updates from the official Resolute/amd64 sources, use the [release build profile](https://github.com/AiursoftWeb/anduinosofflinebundles/blob/master/docs/release-builds.md). It selects the latest target automatically and keeps baseline files and trusted keys outside the checkout.
+
+Use `publish` to upload an installation-qualified bundle to R2 and register it with AnduinOS Home. See [publication and retry behavior](https://github.com/AiursoftWeb/anduinosofflinebundles/blob/master/docs/publication.md).
 
 ## Run locally
 

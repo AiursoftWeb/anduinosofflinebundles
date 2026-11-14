@@ -5,4 +5,5 @@ return await new NestedCommandApp()
     .WithFeature(new BuildHandler())
     .WithFeature(new InspectHandler())
     .WithFeature(new VerifyHandler())
+    .WithFeature(new PublishHandler())
     .RunAsync(args);

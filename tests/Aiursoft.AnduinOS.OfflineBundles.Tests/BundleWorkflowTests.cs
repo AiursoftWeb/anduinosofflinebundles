@@ -55,7 +55,8 @@ public class BundleWorkflowTests
         // These synthetic client states are never inputs to the builder.
         for (var minor = 1; minor <= 5; minor++)
         {
-            var client = _fixture.CreateBaseline($"unlisted-{minor}", $"2.0.{minor}", $"2.0.{minor}-1", "3");
+            var coreVersion = minor == 5 ? "2.0.5-0" : $"2.0.{minor}-1";
+            var client = _fixture.CreateBaseline($"unlisted-{minor}", $"2.0.{minor}", coreVersion, "3");
             var before = await BundleJson.HashAsync(client.StatusFile);
             var preview = await BundlePreview.PreviewAsync(result.File, _fixture.Keyring, client.StatusFile, client.OsReleaseFile);
             Assert.AreEqual("update-available", preview.State, BundleJson.Write(preview));

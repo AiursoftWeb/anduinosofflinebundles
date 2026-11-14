@@ -2,7 +2,9 @@
 
 A profile describes a supported release line and architecture, authenticated package sources and actual installed baselines. It is not a weekly hand-written list of package versions. Relative input paths resolve beside the profile, not beside the executable.
 
-The checked-in example contains **placeholders**, not a production release policy. It needs real inputs before it can run. Do not turn an illustrative removal or migration into a general permission.
+The checked-in example contains **placeholders**, not a production release policy. For the official Resolute/amd64 sources and their reviewed migration, see [release builds](release-builds.md). Both profiles need externally captured, genuine baseline files and trusted keys before they can run. Do not turn an illustrative removal or migration into a general permission.
+
+`build --inputs /path/to/inputs` resolves relative baseline and source-keyring paths against that directory. Without it, those paths continue to resolve beside the profile. An optional `preferences_file` always resolves beside the profile, so a checked-in APT policy can stay with its release definition while large baseline files and keys live outside the checkout.
 
 ## Baselines
 
@@ -15,6 +17,8 @@ Use the original release and relevant intermediate installation variants. Add ca
 Each source has `uri`, `suites`, `components` and an external `keyring`. A flat repository uses `suites: ["./"]` and no components. Standard signed repositories can use a suite and component list. HTTPS, HTTP and local `file` sources require authenticated APT metadata; unauthenticated repositories are not enabled. Source URLs must not contain embedded credentials.
 
 APT indexes are fetched once per build and captured with their hashes. Exact package versions and hashes come from those authenticated indexes. A mirror changing or removing a DEB during the build causes failure, not substitution. For a reproducible release, supply a retained repository snapshot instead of relying on a moving live mirror.
+
+An optional `preferences_file` supplies a reviewed native APT preferences file to the isolated resolver. It is copied into the captured inputs along with the profile; the host's policy is never imported. The official profile uses AnduinOS's source priority so an upstream Ubuntu package with a higher version cannot replace the AnduinOS version package. Even when a preference allows APT to propose a downgrade, the builder still refuses it. Preferences select input packages; they are not installed on an end user's system.
 
 `stages` contains bounded, structured operations. `install` names packages; the final operation must be `dist-upgrade`. No shell commands or archive-provided scripts are supported. A migration that must install new meta packages before the full upgrade can use:
 

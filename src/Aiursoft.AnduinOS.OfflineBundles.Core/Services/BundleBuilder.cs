@@ -30,9 +30,15 @@ public sealed class BundleBuilder(Action<string>? progress = null)
                 baselines.Add(baseline with { StatusFile = status, OsReleaseFile = os });
             }
             profile = profile with { Baselines = baselines };
+            if (profile.PreferencesFile != null)
+            {
+                var preferences = Path.Combine(inputs, "preferences");
+                File.Copy(profile.PreferencesFile, preferences);
+                profile = profile with { PreferencesFile = preferences };
+            }
             var apt = new AptWorkspace(Path.Combine(work, "apt"), profile.Architecture);
             progress?.Invoke("Verifying source indexes.");
-            await apt.SetSourcesAsync(profile.Sources, token);
+            await apt.SetSourcesAsync(profile.Sources, token, profile.PreferencesFile);
             var sourceIndexes = await InventoryAsync(apt.ListsPath, token);
             foreach (var name in sourceIndexes.Keys)
             {
@@ -46,6 +52,7 @@ public sealed class BundleBuilder(Action<string>? progress = null)
             }
             var recordedProfile = profile with
             {
+                PreferencesFile = profile.PreferencesFile == null ? null : "preferences",
                 Baselines = profile.Baselines.Select(b => b with
                 {
                     StatusFile = Path.GetFileName(b.StatusFile), OsReleaseFile = Path.GetFileName(b.OsReleaseFile)

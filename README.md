@@ -38,6 +38,8 @@ Use `build` to create bundles and `verify` to check them. See [commands and vali
 
 For cumulative updates from the official Resolute/amd64 sources, use the [release build profile](https://github.com/AiursoftWeb/anduinosofflinebundles/blob/master/docs/release-builds.md). It selects the latest target automatically and keeps baseline files and trusted keys outside the checkout.
 
+Use `automate` to build the latest cumulative updates every 48 hours, upload them to R2 and maintain a shared download catalog, without a website API. See [automated publication and Docker setup](https://github.com/AiursoftWeb/anduinosofflinebundles/blob/master/docs/automation.md).
+
 Use `publish` to upload an installation-qualified bundle to R2 and register it with AnduinOS Home. See [publication and retry behavior](https://github.com/AiursoftWeb/anduinosofflinebundles/blob/master/docs/publication.md).
 
 ## Run locally

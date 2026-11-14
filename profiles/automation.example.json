@@ -1,0 +1,20 @@
+{
+  "service_url": "https://ACCOUNT_ID.r2.cloudflarestorage.com",
+  "bucket": "YOUR_BUCKET",
+  "state_directory": "/data",
+  "signing": {
+    "home": "/signing",
+    "key": "YOUR_PRODUCTION_SIGNING_FINGERPRINT",
+    "trusted_keyring": "/inputs/keys/bundle-signing.gpg"
+  },
+  "interval_hours": 48,
+  "retry_minutes": 60,
+  "jobs": [
+    {
+      "id": "resolute-2-0-amd64",
+      "profile": "/app/profiles/resolute-amd64.json",
+      "inputs": "/inputs",
+      "summary": "Cumulative AnduinOS system and security updates."
+    }
+  ]
+}

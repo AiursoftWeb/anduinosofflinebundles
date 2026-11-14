@@ -27,8 +27,7 @@
     }
   ],
   "baselines": [
-    { "name": "original200", "status_file": "baselines/2.0.0.status", "os_release_file": "baselines/2.0.0.os-release" },
-    { "name": "intermediate204", "status_file": "baselines/2.0.4.status", "os_release_file": "baselines/2.0.4.os-release" }
+    { "name": "original200", "status_file": "baselines/2.0.0.status", "os_release_file": "baselines/2.0.0.os-release" }
   ],
   "stages": [
     { "operation": "install", "packages": ["anduinos-core-system", "plymouth-anduinos"] },

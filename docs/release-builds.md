@@ -16,15 +16,15 @@ inputs/
   baselines/
     2.0.0.status
     2.0.0.os-release
-    2.0.4.status
-    2.0.4.os-release
 ```
 
-Capture each pair from a genuine installation of the named release, with no APT or dpkg transaction active: `/var/lib/dpkg/status` and `/usr/lib/os-release`. Retain the release, architecture, installation layout and capture provenance with these inputs. Never rename a newer system's metadata to manufacture an old baseline. Package databases contain installed-package information and belong in controlled build storage, not a public download.
+Capture this pair from a genuine 2.0.0 installation, with no APT or dpkg transaction active: `/var/lib/dpkg/status` and `/usr/lib/os-release`. Retain the release, architecture, installation layout and capture provenance with these inputs. Never rename a newer system's metadata to manufacture an old baseline. Package databases contain installed-package information and belong in controlled build storage, not a public download.
 
 Use independently trusted public keyrings from the official `ubuntu-keyring` and `anduinos-archive-keyring` packages. On an installation where those packages have been authenticated, their files are `/usr/share/keyrings/ubuntu-archive-keyring.gpg` and `/usr/share/keyrings/anduinos-archive-keyring.gpg`. A key supplied by an untrusted update archive cannot establish that archive's authenticity.
 
-These release baselines are retained inputs, not files to recapture every two days. Add or review baselines when supporting another release, architecture or migration. This initial profile covers the captured 2.0.0 and 2.0.4 installations; additional layouts and user-installed applications require their own validation.
+The original 2.0.0 baseline is a retained input, not something to recapture every two days. Intermediate releases are not required build inputs or an installer allowlist. The goal is one cumulative bundle for installations from 2.0.0 through the target version within the same suite and architecture; the updater resolves against each machine's actual package state. A system already at the target OS version can still receive newer components, or report `already-installed` when no changes are needed.
+
+Passing the original baseline closure check alone does not prove every intermediate package state works. Validate intermediate and partially updated installations separately, including dependency transitions and supported layouts. Do not turn individual validation examples into mandatory production baselines. Another release line, suite or architecture needs its own genuine original baseline and qualification.
 
 ## Build
 

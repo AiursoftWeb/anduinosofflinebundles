@@ -43,6 +43,36 @@ public class BundleWorkflowTests
     }
 
     [TestMethod]
+    public async Task OriginalOnlyBuildSupportsUnlistedIntermediateAndSameVersionUpdates()
+    {
+        var original = _fixture.Profile.Baselines[0];
+        var profile = _fixture.Profile with { Baselines = [original] };
+        var result = await new BundleBuilder().BuildAsync(profile, _fixture.Output, _fixture.Signing);
+        var verified = await BundleArchive.VerifyAsync(result.File, _fixture.Keyring);
+        Assert.HasCount(1, verified.Manifest.Baselines);
+        Assert.AreEqual("2.0.0", verified.Manifest.Baselines[0].SystemVersion);
+
+        // These synthetic client states are never inputs to the builder.
+        for (var minor = 1; minor <= 5; minor++)
+        {
+            var client = _fixture.CreateBaseline($"unlisted-{minor}", $"2.0.{minor}", $"2.0.{minor}-1", "3");
+            var before = await BundleJson.HashAsync(client.StatusFile);
+            var preview = await BundlePreview.PreviewAsync(result.File, _fixture.Keyring, client.StatusFile, client.OsReleaseFile);
+            Assert.AreEqual("update-available", preview.State, BundleJson.Write(preview));
+            Assert.IsEmpty(preview.Blockers);
+            Assert.IsTrue(preview.Stages.SelectMany(stage => stage.Changes)
+                .Any(change => change.Name == "base-library" && change.After == "5"));
+            Assert.AreEqual(before, await BundleJson.HashAsync(client.StatusFile));
+        }
+
+        var current = _fixture.CreateBaseline("unlisted-current", "2.0.5", "2.0.5-1", "5");
+        var repeated = await BundlePreview.PreviewAsync(result.File, _fixture.Keyring, current.StatusFile, current.OsReleaseFile);
+        Assert.AreEqual("already-installed", repeated.State, BundleJson.Write(repeated));
+        Assert.IsEmpty(repeated.Blockers);
+        Assert.IsTrue(repeated.Stages.All(stage => stage.Changes.Count == 0));
+    }
+
+    [TestMethod]
     public async Task OldVimConstraintCannotMasqueradeAsCompletedUpdate()
     {
         var result = await BuildAsync();

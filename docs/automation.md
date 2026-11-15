@@ -6,7 +6,7 @@
 
 Use a dedicated local state volume and one worker replica. Do not run a second publisher against the same catalog from another machine. A lifetime file lock prevents overlapping invocations sharing the state volume; conditional catalog writes detect conflicting remote changes but are not a distributed worker lease.
 
-Copy [automation.example.json](../profiles/automation.example.json) outside the checkout and replace its endpoint, bucket and signing fingerprint. Paths are absolute. The included example enables only the existing Resolute/amd64 profile. Add a job only after preparing and qualifying that suite, release line and architecture's profile and real baseline inputs. The example is not evidence that all four target groups are ready.
+Copy [automation.example.json](../profiles/automation.example.json) outside the checkout and replace its endpoint, bucket and signing fingerprint. Paths are absolute. The included example enables only the Resolute/amd64 profile. The image also includes Resolute/arm64 and both Stonking profiles. Add a job only after preparing and qualifying that suite, release line and architecture's profile and real baseline inputs. The example is not evidence that all four target groups are ready.
 
 Supply the [release build inputs](release-builds.md) and a signing key trusted by the desktop updater. Keep the signing home private and writable by the worker's user, because GnuPG creates locks and agent sockets. Public keyrings and baseline inputs can be read-only. Do not publish archives signed with temporary test keys as official updates.
 

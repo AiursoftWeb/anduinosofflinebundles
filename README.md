@@ -36,7 +36,7 @@ anduinos-offline-bundles inspect --file update.atgz --keyring trusted-keys.gpg -
 
 Use `build` to create bundles and `verify` to check them. See [commands and validation](https://github.com/AiursoftWeb/anduinosofflinebundles/blob/master/docs/usage.md), [build profiles](https://github.com/AiursoftWeb/anduinosofflinebundles/blob/master/docs/build-profiles.md) and the [archive format](https://github.com/AiursoftWeb/anduinosofflinebundles/blob/master/docs/atgz-v1.md).
 
-For cumulative updates from the official Resolute/amd64 sources, use the [release build profile](https://github.com/AiursoftWeb/anduinosofflinebundles/blob/master/docs/release-builds.md). It selects the latest target automatically and keeps baseline files and trusted keys outside the checkout.
+For cumulative updates from official sources, see the four suite/architecture [release build profiles](https://github.com/AiursoftWeb/anduinosofflinebundles/blob/master/docs/release-builds.md). Each selects the latest target automatically and keeps baseline files and trusted keys outside the checkout. Enable a group only after its official release sources, original baseline and installation qualification are ready.
 
 Use `automate` to build the latest cumulative updates every 48 hours, upload them to R2 and maintain a shared download catalog, without a website API. See [automated publication and Docker setup](https://github.com/AiursoftWeb/anduinosofflinebundles/blob/master/docs/automation.md).
 

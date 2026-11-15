@@ -5,7 +5,7 @@
   "architecture": "amd64",
   "version_package": "base-files",
   "version_file": "usr/lib/os-release",
-  "preferences_file": "resolute-amd64.preferences",
+  "preferences_file": "official.preferences",
   "sources": [
     {
       "uri": "https://archive.ubuntu.com/ubuntu/",

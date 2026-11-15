@@ -43,6 +43,31 @@ public class BundleWorkflowTests
     }
 
     [TestMethod]
+    [DataRow("amd64")]
+    [DataRow("arm64")]
+    public async Task TargetArchitectureIsUsedForBuildAndOfflineResolution(string architecture)
+    {
+        var hostStatus = await BundleJson.HashAsync("/var/lib/dpkg/status");
+        await _fixture.AddPackageAsync("native-component", "2", architecture: architecture);
+        await _fixture.PublishRepositoryAsync();
+        var original = _fixture.CreateBaseline("native-original", "2.0.1", "2.0.1-1", "1",
+            BundleFixture.Status("native-component", "1").Replace("Architecture: all", $"Architecture: {architecture}"));
+        var profile = _fixture.Profile with { Architecture = architecture, Baselines = [original] };
+        var result = await new BundleBuilder().BuildAsync(profile, _fixture.Output, _fixture.Signing);
+        var verified = await BundleArchive.VerifyAsync(result.File, _fixture.Keyring);
+        Assert.AreEqual(architecture, verified.Manifest.Architecture);
+        Assert.IsTrue(verified.Manifest.Packages.Any(package =>
+            package.Identity.Name == "native-component" && package.Identity.Architecture == architecture));
+        var preview = await BundlePreview.PreviewAsync(result.File, _fixture.Keyring,
+            original.StatusFile, original.OsReleaseFile);
+        Assert.AreEqual("update-available", preview.State, BundleJson.Write(preview));
+        Assert.IsEmpty(preview.Blockers);
+        Assert.IsTrue(preview.Stages.SelectMany(stage => stage.Changes).Any(change =>
+            change.Name == "native-component" && change.After == "2" && change.Architecture == architecture));
+        Assert.AreEqual(hostStatus, await BundleJson.HashAsync("/var/lib/dpkg/status"));
+    }
+
+    [TestMethod]
     public async Task OriginalOnlyBuildSupportsUnlistedIntermediateAndSameVersionUpdates()
     {
         var original = _fixture.Profile.Baselines[0];

@@ -10,6 +10,8 @@ Copy [automation.example.json](../profiles/automation.example.json) outside the 
 
 Supply the [release build inputs](release-builds.md) and a signing key trusted by the desktop updater. Keep the signing home private and writable by the worker's user, because GnuPG creates locks and agent sockets. Public keyrings and baseline inputs can be read-only. Do not publish archives signed with temporary test keys as official updates.
 
+The worker checks that the configured private signing key already exists before processing jobs or waiting for the next run. It never generates or replaces an identity. Set optional `trusted_keyring_sha256` to the approved public keyring's SHA-256 to reject a changed keyring at startup. Existing settings without this field remain supported. Mount the settings file read-only at `/config/automation.json`; the container's default command reads it directly, without a shell wrapper or JSON environment variable.
+
 Set `ANDUINOS_R2_ACCESS_KEY` and `ANDUINOS_R2_SECRET_KEY` in the runtime environment. The credential needs object read, write and delete access to the selected bucket. No website URL, website token, database, or inbound network port is needed. Never put credentials in the settings file, image, source repository, or logs.
 
 Run the currently due jobs once:

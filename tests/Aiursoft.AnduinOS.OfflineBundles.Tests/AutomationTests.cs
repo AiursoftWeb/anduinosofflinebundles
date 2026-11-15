@@ -7,6 +7,38 @@ namespace Aiursoft.AnduinOS.OfflineBundles.Tests;
 public class AutomationTests
 {
     [TestMethod]
+    public async Task WorkerRejectsChangedTrustBeforeBuildingOrAccessingStorage()
+    {
+        using var fixture = new BundleFixture();
+        await fixture.InitializeAsync();
+        var settings = new AutomationSettings
+        {
+            ServiceUrl = "https://storage.example", Bucket = "updates", StateDirectory = Path.Combine(fixture.Root, "worker"),
+            Signing = fixture.Signing, TrustedKeyringSha256 = new string('0', 64),
+            Jobs = [new AutomationJob("resolute-amd64", Path.Combine(fixture.Root, "missing.json"), fixture.Root, "Updates.")]
+        };
+        var store = new CatalogStorage();
+        await Assert.ThrowsExactlyAsync<InvalidDataException>(() =>
+            new AutomationWorker(settings, store, _ => { }).RunAsync(true, default));
+        Assert.IsEmpty(store.Events);
+        Assert.IsFalse(File.Exists(Path.Combine(settings.StateDirectory, "schedule.json")));
+        await BundleSigning.ValidateIdentityAsync(fixture.Signing, await BundleJson.HashAsync(fixture.Keyring), default);
+        Assert.ThrowsExactly<ArgumentException>(() => AutomationWorker.Validate(settings with { TrustedKeyringSha256 = "not-a-hash" }));
+    }
+
+    [TestMethod]
+    public async Task MissingPrivateIdentityIsNotRecreated()
+    {
+        using var fixture = new BundleFixture();
+        await fixture.InitializeAsync();
+        var missing = fixture.Signing with { Home = Path.Combine(fixture.Root, "missing-signing") };
+        await Assert.ThrowsExactlyAsync<InvalidDataException>(() => BundleSigning.ValidateIdentityAsync(missing, null, default));
+        Assert.IsFalse(Directory.Exists(missing.Home));
+        await Assert.ThrowsAsync<Exception>(() => BundleSigning.ValidateIdentityAsync(
+            fixture.Signing with { Key = "not-the-signing-key@example.invalid" }, null, default));
+    }
+
+    [TestMethod]
     public async Task FourBatchesRetainThreeAndDeleteOnlyAfterGrace()
     {
         using var fixture = new BundleFixture();

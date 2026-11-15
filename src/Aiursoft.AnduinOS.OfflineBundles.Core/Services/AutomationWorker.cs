@@ -21,6 +21,7 @@ public sealed class AutomationWorker(AutomationSettings settings, ICatalogStore 
         Directory.CreateDirectory(root);
         // Held for the entire lifetime, including waits. All invocations must share this local volume.
         await using var runLock = new FileStream(Path.Combine(root, "worker.lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+        await BundleSigning.ValidateIdentityAsync(settings.Signing, settings.TrustedKeyringSha256, token);
         var stateFile = Path.Combine(root, "schedule.json");
         var state = File.Exists(stateFile) ? BundleJson.Read<AutomationState>(await File.ReadAllTextAsync(stateFile, token)) : new AutomationState();
         do
@@ -123,6 +124,8 @@ public sealed class AutomationWorker(AutomationSettings settings, ICatalogStore 
 
     public static void Validate(AutomationSettings value)
     {
+        if (value.TrustedKeyringSha256 != null && !Regex.IsMatch(value.TrustedKeyringSha256, "\\A[a-fA-F0-9]{64}\\z"))
+            throw new ArgumentException("The trusted keyring SHA-256 must contain 64 hexadecimal characters.");
         if (!Uri.TryCreate(value.ServiceUrl, UriKind.Absolute, out var url) || url.Scheme != "https" ||
             url.UserInfo.Length != 0 || url.Query.Length != 0 || url.Fragment.Length != 0 || string.IsNullOrWhiteSpace(value.Bucket))
             throw new ArgumentException("Configure an HTTPS R2 endpoint without credentials, query or fragment, and a bucket.");

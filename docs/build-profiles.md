@@ -10,7 +10,7 @@ The checked-in example contains **placeholders**, not a production release polic
 
 Capture `/var/lib/dpkg/status` and `/usr/lib/os-release` from each supported installed image or VM while no package transaction is active. Keep the complete native status database, including dependency and hold information. A TSV of names and versions alone cannot replace it. Baseline names must be unique tokens.
 
-Use the original release and relevant intermediate installation variants. Add cases for supported system-layout migrations. A successfully generated bundle proves closure only for the baselines supplied; it does not prove every possible third-party package combination works.
+The official release profile uses the original release as its build baseline. Intermediate versions are compatibility test cases, not a list of versions permitted to update or mandatory build inputs. The generic profile format still supports multiple baselines for other reviewed profiles. A successfully generated bundle proves closure only for the supplied build inputs; validate intermediate package states and supported system-layout migrations separately. It does not prove every possible third-party package combination works.
 
 ## Sources and migration stages
 

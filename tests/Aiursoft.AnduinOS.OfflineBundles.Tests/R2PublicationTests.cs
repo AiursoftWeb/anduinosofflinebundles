@@ -36,6 +36,8 @@ public class R2PublicationTests
             await store.UploadAsync(file, publication, default);
             Assert.HasCount(2, client.PartLengths);
             Assert.AreEqual("application/octet-stream", client.ContentType);
+            Assert.AreEqual("attachment; filename=\"AnduinOS-2.0.5-resolute-amd64-20261114T174315Z.atgz\"", client.ContentDisposition);
+            Assert.AreEqual($"offline/resolute/2.0/amd64/{publication.BatchId}/{publication.Sha256}.atgz", client.ObjectKey);
         }
         finally { directory.Delete(recursive: true); }
     }
@@ -77,7 +79,7 @@ public class R2PublicationTests
 
     private static async Task<UpdatePublication> Publication(string file) => new(
         new string('a', 64), "2.0", "resolute", "amd64", "2.0.5", "2.0.0",
-        await BundleJson.HashAsync(file), new string('B', 40), new FileInfo(file).Length, DateTime.UtcNow, "Security updates.");
+        await BundleJson.HashAsync(file), new string('B', 40), new FileInfo(file).Length, new DateTime(2026, 11, 14, 17, 43, 15, DateTimeKind.Utc), "Security updates.");
 
     private sealed class StorageClient(string file) : AmazonS3Client(new BasicAWSCredentials("test", "test"),
         new AmazonS3Config { ServiceURL = "https://storage.example", ForcePathStyle = true, AuthenticationRegion = "auto" })
@@ -90,6 +92,8 @@ public class R2PublicationTests
         public bool FailUpload { get; init; }
         public string? UploadedHash { get; private set; }
         public string? ContentType { get; private set; }
+        public string? ContentDisposition { get; private set; }
+        public string? ObjectKey { get; private set; }
 
         public override Task<GetObjectMetadataResponse> GetObjectMetadataAsync(GetObjectMetadataRequest request, CancellationToken cancellationToken = default)
         {
@@ -102,6 +106,8 @@ public class R2PublicationTests
         {
             _metadata = request.Metadata;
             ContentType = request.ContentType;
+            ContentDisposition = request.Headers.ContentDisposition;
+            ObjectKey = request.Key;
             return Task.FromResult(new InitiateMultipartUploadResponse { UploadId = "test-upload" });
         }
         public override async Task<UploadPartResponse> UploadPartAsync(UploadPartRequest request, CancellationToken cancellationToken = default)

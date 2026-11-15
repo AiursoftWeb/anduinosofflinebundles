@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json.Serialization;
 
 namespace Aiursoft.AnduinOS.OfflineBundles.Core.Models;
@@ -13,5 +14,8 @@ public sealed record UpdatePublication(string BatchId, string ReleaseLine, strin
     string TargetVersion, string MinimumVersion, string Sha256, string SigningFingerprint, long Size,
     DateTime CreatedUtc, string Summary)
 {
+    [JsonIgnore] public string DownloadFileName =>
+        $"AnduinOS-{TargetVersion}-{Suite}-{Architecture}-{CreatedUtc.ToUniversalTime().ToString("yyyyMMddTHHmmssZ", CultureInfo.InvariantCulture)}.atgz";
+
     [JsonIgnore] public string ObjectKey => $"offline/{Suite}/{ReleaseLine}/{Architecture}/{BatchId}/{Sha256}.atgz";
 }

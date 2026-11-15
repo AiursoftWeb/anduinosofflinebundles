@@ -60,5 +60,11 @@
       "packages": []
     }
   ],
-  "allowed_removals": []
+  "allowed_removals": [],
+  "coverage_packages": [
+    "anduinos-core-system",
+    "anduinos-desktop",
+    "anduinos-desktop-apps",
+    "anduinos-btrfs-snapshots-manager"
+  ]
 }

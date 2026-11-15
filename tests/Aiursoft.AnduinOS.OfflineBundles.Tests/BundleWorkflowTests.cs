@@ -99,6 +99,60 @@ public class BundleWorkflowTests
     }
 
     [TestMethod]
+    [DataRow("amd64")]
+    [DataRow("arm64")]
+    public async Task DesktopCoverageUpdatesLaterPreinstalledDependenciesWithoutInstallingTheDesktop(string architecture)
+    {
+        var hostStatus = await BundleJson.HashAsync("/var/lib/dpkg/status");
+        await _fixture.AddPackageAsync("later-component", "5", "base-library (= 5)", architecture: architecture);
+        await _fixture.AddPackageAsync("desktop-meta", "5", recommends: "later-component");
+        await _fixture.PublishRepositoryAsync();
+        var original = _fixture.Profile.Baselines[0];
+        var profile = _fixture.Profile with { Architecture = architecture, Baselines = [original] };
+        var later = _fixture.CreateBaseline("later-desktop", "2.0.5", "2.0.5-0", "3",
+            BundleFixture.Status("later-component", "3", "base-library (= 3)")
+                .Replace("Architecture: all", $"Architecture: {architecture}"));
+        var before = await BundleJson.HashAsync(later.StatusFile);
+        var incomplete = await new BundleBuilder().BuildAsync(profile, _fixture.Output, _fixture.Signing);
+        var blocked = await BundlePreview.PreviewAsync(incomplete.File, _fixture.Keyring, later.StatusFile, later.OsReleaseFile);
+        Assert.AreEqual("blocked", blocked.State);
+
+        var result = await new BundleBuilder().BuildAsync(profile with { CoveragePackages = ["desktop-meta"] },
+            _fixture.Output, _fixture.Signing);
+        var verified = await BundleArchive.VerifyAsync(result.File, _fixture.Keyring);
+        Assert.HasCount(1, verified.Manifest.Baselines);
+        Assert.AreEqual("2.0.0", verified.Manifest.Baselines[0].SystemVersion);
+        Assert.IsTrue(verified.Manifest.Packages.Any(p => p.Identity.Name == "later-component"));
+        Assert.AreEqual(BundleJson.Write(profile.Stages), BundleJson.Write(verified.Manifest.Stages));
+        foreach (var client in new[] { original, later })
+        {
+            var preview = await BundlePreview.PreviewAsync(result.File, _fixture.Keyring, client.StatusFile, client.OsReleaseFile);
+            Assert.AreEqual("update-available", preview.State, BundleJson.Write(preview));
+            Assert.IsEmpty(preview.Blockers);
+            var changes = preview.Stages.SelectMany(s => s.Changes).ToList();
+            Assert.IsFalse(changes.Any(c => c.Name == "desktop-meta" || c.Action == "remove"));
+            Assert.AreEqual(client == later, changes.Any(c => c.Name == "later-component" && c.After == "5"));
+        }
+        var current = _fixture.CreateBaseline("covered-current", "2.0.5", "2.0.5-1", "5",
+            BundleFixture.Status("later-component", "5", "base-library (= 5)")
+                .Replace("Architecture: all", $"Architecture: {architecture}"));
+        var repeated = await BundlePreview.PreviewAsync(result.File, _fixture.Keyring, current.StatusFile, current.OsReleaseFile);
+        Assert.AreEqual("already-installed", repeated.State, BundleJson.Write(repeated));
+        Assert.AreEqual(before, await BundleJson.HashAsync(later.StatusFile));
+        Assert.AreEqual(hostStatus, await BundleJson.HashAsync("/var/lib/dpkg/status"));
+    }
+
+    [TestMethod]
+    public async Task UnresolvableDesktopCoverageDoesNotPublishAPartialBundle()
+    {
+        await _fixture.AddPackageAsync("broken-desktop", "1", "missing-component");
+        await _fixture.PublishRepositoryAsync();
+        await Assert.ThrowsAsync<Exception>(() => new BundleBuilder().BuildAsync(
+            _fixture.Profile with { CoveragePackages = ["broken-desktop"] }, _fixture.Output, _fixture.Signing));
+        Assert.IsEmpty(Directory.GetFiles(_fixture.Output, "*.atgz"));
+    }
+
+    [TestMethod]
     public async Task OldVimConstraintCannotMasqueradeAsCompletedUpdate()
     {
         var result = await BuildAsync();

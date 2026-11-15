@@ -12,6 +12,14 @@ Capture `/var/lib/dpkg/status` and `/usr/lib/os-release` from each supported ins
 
 Each official release profile uses its group's original release as its build baseline. Intermediate versions are compatibility test cases, not a list of versions permitted to update or mandatory build inputs. The generic profile format still supports multiple baselines for other reviewed profiles. A successfully generated bundle proves closure only for the supplied build inputs; validate intermediate package states and supported system-layout migrations separately. It does not prove every possible third-party package combination works.
 
+## Current desktop coverage
+
+Optional `coverage_packages` names the official desktop meta packages whose current dependency closure should also be included. The builder resolves a fresh installation of these roots using the same frozen, authenticated indexes, architecture and source priorities. Native APT includes dependencies and recommendations. This adds package candidates for components introduced after the original baseline, including exact-version library companions.
+
+This is **build-time coverage**, not an extra client installation stage. An absent optional application is not installed merely because its DEB is in the archive. The updater still resolves the user's installed system and rejects unmet targets, downgrades and unapproved removals. No intermediate-release status files or hand-maintained package versions are required.
+
+Coverage increases download size and cannot cover arbitrary third-party repositories or every historical dependency transition. Roots should follow the official desktop packaging; review them when that packaging changes, not every security batch. An empty or omitted list preserves baseline-only builds. Invalid roots or an unsatisfiable dependency closure fail the build before publication. The captured profile records roots, and the build receipt records the resolved coverage plan.
+
 ## Sources and migration stages
 
 Each source has `uri`, `suites`, `components` and an external `keyring`. A flat repository uses `suites: ["./"]` and no components. Standard signed repositories can use a suite and component list. HTTPS, HTTP and local `file` sources require authenticated APT metadata; unauthenticated repositories are not enabled. Source URLs must not contain embedded credentials.

@@ -54,6 +54,8 @@ Use independently trusted public keyrings from the official `ubuntu-keyring` and
 
 Each group's original baseline is a retained input, not something to recapture every two days. Intermediate releases are not required build inputs or an installer allowlist. The goal is one cumulative bundle for installations from its original baseline through the target version within the same release line, suite and architecture; the updater resolves against each machine's actual package state. A system already at the target OS version can still receive newer components, or report `already-installed` when no changes are needed.
 
+The official profiles also include the latest dependencies and recommendations of `anduinos-core-system`, `anduinos-desktop`, `anduinos-desktop-apps` and `anduinos-btrfs-snapshots-manager`. This covers current desktop components missing from the original baseline without forcing them onto clients that do not use them. Versions come from the authenticated sources on every build; there is no per-release package-version list. See [current desktop coverage](build-profiles.md#current-desktop-coverage).
+
 Passing the original baseline closure check alone does not prove every intermediate package state works. Validate intermediate and partially updated installations separately, including dependency transitions and supported layouts. Do not turn individual validation examples into mandatory production baselines. Another release line, suite or architecture needs its own genuine original baseline and qualification.
 
 ## Build

@@ -44,6 +44,10 @@ public static partial class ProfileReader
         ValidatePackage(profile.VersionPackage);
         ValidatePath(profile.VersionFile);
         ValidateStages(profile.Stages, profile.AllowedRemovals);
+        foreach (var package in profile.CoveragePackages)
+        {
+            ValidatePackage(package);
+        }
         if (profile.Sources.Count == 0 || profile.Baselines.Count == 0 ||
             profile.Baselines.Select(b => b.Name).Distinct(StringComparer.Ordinal).Count() != profile.Baselines.Count)
         {

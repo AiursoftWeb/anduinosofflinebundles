@@ -49,7 +49,7 @@ internal sealed class BundleFixture : IDisposable
         return new BaselineDefinition { Name = name, StatusFile = status, OsReleaseFile = os };
     }
 
-    public async Task AddPackageAsync(string name, string version, string? depends = null, string? conflicts = null, string? osVersion = null, string architecture = "all")
+    public async Task AddPackageAsync(string name, string version, string? depends = null, string? conflicts = null, string? osVersion = null, string architecture = "all", string? recommends = null)
     {
         var directory = Path.Combine(Root, "deb-" + name + "-" + version);
         Directory.CreateDirectory(Path.Combine(directory, "DEBIAN"));
@@ -61,6 +61,7 @@ internal sealed class BundleFixture : IDisposable
         }
         var control = $"Package: {name}\nVersion: {version}\nArchitecture: {architecture}\nMaintainer: Fixture <fixture@example.invalid>\nDescription: Offline bundle business test fixture\n";
         if (depends != null) control += $"Depends: {depends}\n";
+        if (recommends != null) control += $"Recommends: {recommends}\n";
         if (conflicts != null) control += $"Conflicts: {conflicts}\n";
         File.WriteAllText(Path.Combine(directory, "DEBIAN/control"), control);
         if (osVersion != null)

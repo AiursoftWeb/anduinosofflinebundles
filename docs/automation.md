@@ -70,6 +70,8 @@ The object key is immutable and derived from the signed manifest and full archiv
 offline/{suite}/{release_line}/{architecture}/{batch_id}/{sha256}.atgz
 ```
 
+New uploads set an attachment filename such as `AnduinOS-2.0.5-resolute-amd64-20261114T174315Z.atgz`. The UTC build timestamp distinguishes security updates for the same OS version. Browsers save this readable name while the immutable URL, signed archive and SHA256 remain unchanged. Previously uploaded objects retain their existing download headers until explicitly updated.
+
 Website readers should sort each group by numeric target version, then creation time descending. Display the summary as text. Never expose the R2 credential. A later website can issue download links using its own read-only access; there is no publisher-to-website registration step. Keep catalog caches and issued download link lifetimes below the 24-hour deletion grace.
 
 ## Failure and retention behavior

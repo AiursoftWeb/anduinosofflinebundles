@@ -26,6 +26,7 @@ public sealed class R2BundleStore(IAmazonS3 client, string bucket) : IBundlePubl
 
         var initiate = new InitiateMultipartUploadRequest
             { BucketName = bucket, Key = publication.ObjectKey, ContentType = "application/octet-stream" };
+        initiate.Headers.ContentDisposition = $"attachment; filename=\"{publication.DownloadFileName}\"";
         initiate.Metadata.Add("sha256", publication.Sha256);
         initiate.Metadata.Add("batch-id", publication.BatchId);
         var upload = await client.InitiateMultipartUploadAsync(initiate, token);

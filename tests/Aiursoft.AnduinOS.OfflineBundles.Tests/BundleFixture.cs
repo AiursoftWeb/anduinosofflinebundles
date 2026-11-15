@@ -49,7 +49,7 @@ internal sealed class BundleFixture : IDisposable
         return new BaselineDefinition { Name = name, StatusFile = status, OsReleaseFile = os };
     }
 
-    public async Task AddPackageAsync(string name, string version, string? depends = null, string? conflicts = null, string? osVersion = null)
+    public async Task AddPackageAsync(string name, string version, string? depends = null, string? conflicts = null, string? osVersion = null, string architecture = "all", string? recommends = null)
     {
         var directory = Path.Combine(Root, "deb-" + name + "-" + version);
         Directory.CreateDirectory(Path.Combine(directory, "DEBIAN"));
@@ -59,8 +59,9 @@ internal sealed class BundleFixture : IDisposable
                 UnixFileMode.UserExecute | UnixFileMode.GroupRead | UnixFileMode.GroupExecute |
                 UnixFileMode.OtherRead | UnixFileMode.OtherExecute);
         }
-        var control = $"Package: {name}\nVersion: {version}\nArchitecture: all\nMaintainer: Fixture <fixture@example.invalid>\nDescription: Offline bundle business test fixture\n";
+        var control = $"Package: {name}\nVersion: {version}\nArchitecture: {architecture}\nMaintainer: Fixture <fixture@example.invalid>\nDescription: Offline bundle business test fixture\n";
         if (depends != null) control += $"Depends: {depends}\n";
+        if (recommends != null) control += $"Recommends: {recommends}\n";
         if (conflicts != null) control += $"Conflicts: {conflicts}\n";
         File.WriteAllText(Path.Combine(directory, "DEBIAN/control"), control);
         if (osVersion != null)
@@ -69,7 +70,7 @@ internal sealed class BundleFixture : IDisposable
             File.WriteAllText(Path.Combine(directory, "usr/lib/os-release"), OsRelease(osVersion));
         }
         await NativeCommand.RunAsync("dpkg-deb", ["--build", "--root-owner-group", directory,
-            Path.Combine(Repository, $"{name}_{version}_all.deb")]);
+            Path.Combine(Repository, $"{name}_{version}_{architecture}.deb")]);
     }
 
     public async Task PublishRepositoryAsync()
@@ -80,7 +81,7 @@ internal sealed class BundleFixture : IDisposable
             await NativeCommand.RunAsync("apt-ftparchive", ["packages", "."], Repository, output: output);
         }
         var release = Path.Combine(Repository, "Release");
-        File.WriteAllText(release, "Origin: Offline Fixture\nSuite: resolute\nCodename: resolute\nArchitectures: amd64 all\nDate: " +
+        File.WriteAllText(release, "Origin: Offline Fixture\nSuite: resolute\nCodename: resolute\nArchitectures: amd64 arm64 all\nDate: " +
             DateTimeOffset.UtcNow.ToString("ddd, dd MMM yyyy HH:mm:ss +0000", CultureInfo.InvariantCulture) +
             $"\nSHA256:\n {await BundleJson.HashAsync(packages)} {new FileInfo(packages).Length} Packages\n");
         await BundleSigning.SignAsync(release, Path.Combine(Repository, "InRelease"), Signing, true, default);

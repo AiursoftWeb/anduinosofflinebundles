@@ -1,0 +1,70 @@
+{
+  "format_version": 1,
+  "release_line": "2.1",
+  "suite": "stonking",
+  "architecture": "amd64",
+  "version_package": "base-files",
+  "version_file": "usr/lib/os-release",
+  "preferences_file": "official.preferences",
+  "sources": [
+    {
+      "uri": "https://archive.ubuntu.com/ubuntu/",
+      "suites": [
+        "stonking",
+        "stonking-updates",
+        "stonking-backports"
+      ],
+      "components": [
+        "main",
+        "restricted",
+        "universe",
+        "multiverse"
+      ],
+      "keyring": "keys/ubuntu-archive-keyring.gpg"
+    },
+    {
+      "uri": "https://security.ubuntu.com/ubuntu/",
+      "suites": [
+        "stonking-security"
+      ],
+      "components": [
+        "main",
+        "restricted",
+        "universe",
+        "multiverse"
+      ],
+      "keyring": "keys/ubuntu-archive-keyring.gpg"
+    },
+    {
+      "uri": "https://packages.anduinos.com/artifacts/anduinos/",
+      "suites": [
+        "stonking-addon",
+        "stonking-webapps"
+      ],
+      "components": [
+        "main"
+      ],
+      "keyring": "keys/anduinos-archive-keyring.gpg"
+    }
+  ],
+  "baselines": [
+    {
+      "name": "original210",
+      "status_file": "baselines/stonking-amd64/2.1.0.status",
+      "os_release_file": "baselines/stonking-amd64/2.1.0.os-release"
+    }
+  ],
+  "stages": [
+    {
+      "operation": "dist-upgrade",
+      "packages": []
+    }
+  ],
+  "allowed_removals": [],
+  "coverage_packages": [
+    "anduinos-core-system",
+    "anduinos-desktop",
+    "anduinos-desktop-apps",
+    "anduinos-btrfs-snapshots-manager"
+  ]
+}

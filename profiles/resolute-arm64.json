@@ -1,0 +1,73 @@
+{
+  "format_version": 1,
+  "release_line": "2.0",
+  "suite": "resolute",
+  "architecture": "arm64",
+  "version_package": "base-files",
+  "version_file": "usr/lib/os-release",
+  "preferences_file": "official.preferences",
+  "sources": [
+    {
+      "uri": "https://ports.ubuntu.com/ubuntu-ports/",
+      "suites": [
+        "resolute",
+        "resolute-updates",
+        "resolute-backports",
+        "resolute-security"
+      ],
+      "components": [
+        "main",
+        "restricted",
+        "universe",
+        "multiverse"
+      ],
+      "keyring": "keys/ubuntu-archive-keyring.gpg"
+    },
+    {
+      "uri": "https://packages.anduinos.com/artifacts/anduinos/",
+      "suites": [
+        "resolute-addon",
+        "resolute-webapps"
+      ],
+      "components": [
+        "main"
+      ],
+      "keyring": "keys/anduinos-archive-keyring.gpg"
+    }
+  ],
+  "baselines": [
+    {
+      "name": "original201",
+      "status_file": "baselines/resolute-arm64/2.0.1.status",
+      "os_release_file": "baselines/resolute-arm64/2.0.1.os-release"
+    }
+  ],
+  "stages": [
+    {
+      "operation": "install",
+      "packages": [
+        "anduinos-core-system",
+        "plymouth-anduinos"
+      ]
+    },
+    {
+      "operation": "dist-upgrade",
+      "packages": []
+    }
+  ],
+  "allowed_removals": [
+    "casper",
+    "cryptsetup-initramfs",
+    "initramfs-tools",
+    "initramfs-tools-core",
+    "initramfs-tools-bin",
+    "finalrd",
+    "busybox-initramfs"
+  ],
+  "coverage_packages": [
+    "anduinos-core-system",
+    "anduinos-desktop",
+    "anduinos-desktop-apps",
+    "anduinos-btrfs-snapshots-manager"
+  ]
+}

@@ -16,6 +16,7 @@ public sealed record BuildProfile
     public required List<SourceDefinition> Sources { get; init; }
     public required List<BaselineDefinition> Baselines { get; init; }
     public string? PreferencesFile { get; init; }
+    public List<string> CoveragePackages { get; init; } = [];
     public List<UpdateStage> Stages { get; init; } = [new() { Operation = "dist-upgrade" }];
     public List<string> AllowedRemovals { get; init; } = [];
     public UpdaterBootstrap? Bootstrap { get; init; }

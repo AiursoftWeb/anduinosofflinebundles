@@ -84,6 +84,21 @@ public sealed class BundleBuilder(Action<string>? progress = null)
             }
             // Resolve the version package against the frozen indexes, without inheriting a baseline's installed candidate.
             await apt.SetStatusAsync(string.Empty, token);
+            // Later releases can preinstall packages absent from the original baseline.
+            // Make the current desktop's dependencies available without adding client install stages.
+            var coveragePlan = new List<PackageChange>();
+            if (profile.CoveragePackages.Count != 0)
+            {
+                progress?.Invoke("Resolving current desktop dependency coverage.");
+                coveragePlan = await apt.SimulateAsync(new UpdateStage
+                {
+                    Operation = "install", Packages = profile.CoveragePackages
+                }, [], token);
+                foreach (var change in coveragePlan)
+                {
+                    AddPackage(allPackages, new PackageIdentity(change.Name, change.After!, change.Architecture));
+                }
+            }
             var versionMetadata = await apt.CandidateAsync(profile.VersionPackage, token);
             var versionIdentity = DebianControl.Identity(versionMetadata);
             AddPackage(allPackages, versionIdentity);
@@ -207,6 +222,7 @@ public sealed class BundleBuilder(Action<string>? progress = null)
                     Runtime = Environment.Version.ToString(),
                     NativeVersions = nativeVersions,
                     CapturedInputs = Path.GetFileName(destinationFile) + ".inputs",
+                    CoveragePlan = coveragePlan,
                     Validation = "Signed archive, authenticated package hashes and local APT baseline plans; no installation performed."
                 };
                 Directory.Move(inputs, destinationFile + ".inputs");

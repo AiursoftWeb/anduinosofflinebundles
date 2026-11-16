@@ -22,7 +22,9 @@ The tool builds, verifies, previews and publishes updates. It does not install t
 
 Install the CLI with the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0):
 
-2. Debian/Ubuntu Linux with `apt-get`, `apt-cache`, `apt-ftparchive` (`apt-utils`), `dpkg`, `dpkg-deb`, `gpg` and `gpgv`.
+**Additional requirements**
+
+- Debian/Ubuntu Linux with `apt-get`, `apt-cache`, `apt-ftparchive` (`apt-utils`), `dpkg`, `dpkg-deb`, `gpg` and `gpgv`.
 
 Install the published tool globally:
 

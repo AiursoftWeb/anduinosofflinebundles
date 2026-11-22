@@ -154,7 +154,7 @@ public sealed partial class AptWorkspace
             (p.GetValueOrDefault("Architecture") == _architecture || p.GetValueOrDefault("Architecture") == "all"))
             ?? throw new InvalidDataException($"No trusted index entry for {package}={version}.");
         // Only cache authenticated index entries, not status-only package descriptions.
-        if (metadata.ContainsKey("SHA256"))
+        if (metadata.ContainsKey("SHA256") || metadata.ContainsKey("SHA512"))
         {
             _metadata[(package, version)] = new Dictionary<string, string>(metadata, StringComparer.OrdinalIgnoreCase);
         }

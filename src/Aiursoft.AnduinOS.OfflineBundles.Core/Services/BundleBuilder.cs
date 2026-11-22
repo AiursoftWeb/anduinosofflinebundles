@@ -131,7 +131,7 @@ public sealed class BundleBuilder(Action<string>? progress = null)
                 }
                 var index = await apt.MetadataAsync(identity.Name, identity.Version, token);
                 var digest = new FileDigest(new FileInfo(file).Length, await BundleJson.HashAsync(file, token));
-                if (index.GetValueOrDefault("SHA256") != digest.Sha256 || index.GetValueOrDefault("Size") != digest.Size.ToString(CultureInfo.InvariantCulture))
+                if (!await MatchesAuthenticatedIndexAsync(file, index, digest, token))
                 {
                     throw new InvalidDataException($"Package differs from its authenticated index: {identity.Name}");
                 }
@@ -263,6 +263,24 @@ public sealed class BundleBuilder(Action<string>? progress = null)
         {
             throw new InvalidDataException("The operating system is outside the bundle's supported release line or suite.");
         }
+    }
+
+    private static async Task<bool> MatchesAuthenticatedIndexAsync(string file, IReadOnlyDictionary<string, string> index,
+        FileDigest digest, CancellationToken token)
+    {
+        if (index.GetValueOrDefault("Size") != digest.Size.ToString(CultureInfo.InvariantCulture) ||
+            (index.TryGetValue("SHA256", out var sha256) && !string.Equals(sha256, digest.Sha256, StringComparison.OrdinalIgnoreCase)))
+        {
+            return false;
+        }
+        if (!index.TryGetValue("SHA512", out var sha512))
+        {
+            return sha256 != null;
+        }
+
+        await using var stream = File.OpenRead(file);
+        var actual = Convert.ToHexStringLower(await SHA512.HashDataAsync(stream, token));
+        return string.Equals(sha512, actual, StringComparison.OrdinalIgnoreCase);
     }
 
     private static void AddPackage(IDictionary<string, PackageIdentity> packages, PackageIdentity package)

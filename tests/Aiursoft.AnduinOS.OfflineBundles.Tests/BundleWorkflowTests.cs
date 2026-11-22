@@ -43,6 +43,16 @@ public class BundleWorkflowTests
     }
 
     [TestMethod]
+    public async Task BuildsFromAnAuthenticatedSha512OnlyPackageIndex()
+    {
+        await _fixture.PublishRepositoryAsync(sha512Only: true);
+        var result = await BuildAsync();
+        var verified = await BundleArchive.VerifyAsync(result.File, _fixture.Keyring);
+        Assert.AreEqual("2.0.5", verified.Manifest.TargetVersion);
+        Assert.HasCount(3, verified.Manifest.Packages);
+    }
+
+    [TestMethod]
     [DataRow("amd64")]
     [DataRow("arm64")]
     public async Task TargetArchitectureIsUsedForBuildAndOfflineResolution(string architecture)

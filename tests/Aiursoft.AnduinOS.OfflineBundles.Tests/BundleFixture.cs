@@ -73,12 +73,23 @@ internal sealed class BundleFixture : IDisposable
             Path.Combine(Repository, $"{name}_{version}_{architecture}.deb")]);
     }
 
-    public async Task PublishRepositoryAsync()
+    public async Task PublishRepositoryAsync(bool sha512Only = false)
     {
         var packages = Path.Combine(Repository, "Packages");
         await using (var output = File.Create(packages))
         {
             await NativeCommand.RunAsync("apt-ftparchive", ["packages", "."], Repository, output: output);
+        }
+        if (sha512Only)
+        {
+            var entries = DebianControl.Read(await File.ReadAllTextAsync(packages));
+            foreach (var entry in entries)
+            {
+                entry.Remove("MD5sum");
+                entry.Remove("SHA1");
+                entry.Remove("SHA256");
+            }
+            await File.WriteAllTextAsync(packages, DebianControl.Write(entries));
         }
         var release = Path.Combine(Repository, "Release");
         File.WriteAllText(release, "Origin: Offline Fixture\nSuite: resolute\nCodename: resolute\nArchitectures: amd64 arm64 all\nDate: " +

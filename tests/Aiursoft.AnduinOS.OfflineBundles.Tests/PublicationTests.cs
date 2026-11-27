@@ -13,7 +13,7 @@ public class PublicationTests
     {
         using var fixture = new BundleFixture();
         await fixture.InitializeAsync();
-        var build = await new BundleBuilder().BuildAsync(fixture.Profile, fixture.Output, fixture.Signing);
+        var build = await new BundleBuilder(fixture.Signer).BuildAsync(fixture.Profile, fixture.Output, fixture.Signing);
         var store = new PublicationStore();
         using var handler = new RegistrationHandler(store);
         using var http = new HttpClient(handler);
@@ -41,7 +41,7 @@ public class PublicationTests
     {
         using var fixture = new BundleFixture();
         await fixture.InitializeAsync();
-        var build = await new BundleBuilder().BuildAsync(fixture.Profile, fixture.Output, fixture.Signing);
+        var build = await new BundleBuilder(fixture.Signer).BuildAsync(fixture.Profile, fixture.Output, fixture.Signing);
         var store = new PublicationStore { FailVerification = true };
         using var handler = new RegistrationHandler(store);
         using var http = new HttpClient(handler);

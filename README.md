@@ -24,7 +24,7 @@ Install the CLI with the [.NET 10 SDK](https://dotnet.microsoft.com/download/dot
 
 **Additional requirements**
 
-- Debian/Ubuntu Linux with `apt-get`, `apt-cache`, `apt-ftparchive` (`apt-utils`), `dpkg`, `dpkg-deb`, `gpg` and `gpgv`.
+- Debian/Ubuntu Linux with `apt-get`, `apt-cache`, `apt-ftparchive` (`apt-utils`), `dpkg`, `dpkg-deb` and `gpgv` (`gpg` is only required when running the test suite).
 
 Install the published tool globally:
 
@@ -60,11 +60,11 @@ Run as an ordinary user. Inspect an update using an independently trusted public
 anduinos-offline-bundles inspect --file update.atgz --keyring trusted-keys.gpg --json
 ```
 
-Use `build` to create bundles and `verify` to check them. See [commands and validation](https://github.com/AiursoftWeb/anduinosofflinebundles/blob/master/docs/usage.md), [build profiles](https://github.com/AiursoftWeb/anduinosofflinebundles/blob/master/docs/build-profiles.md) and the [archive format](https://github.com/AiursoftWeb/anduinosofflinebundles/blob/master/docs/atgz-v1.md).
+Use `build` to create bundles via ESRP Sign and `verify` to check them locally with `gpgv`. See [commands and validation](https://github.com/AiursoftWeb/anduinosofflinebundles/blob/master/docs/usage.md), [build profiles](https://github.com/AiursoftWeb/anduinosofflinebundles/blob/master/docs/build-profiles.md) and the [archive format](https://github.com/AiursoftWeb/anduinosofflinebundles/blob/master/docs/atgz-v1.md).
 
 For cumulative updates from official sources, see the four suite/architecture [release build profiles](https://github.com/AiursoftWeb/anduinosofflinebundles/blob/master/docs/release-builds.md). Each selects the latest target automatically and keeps baseline files and trusted keys outside the checkout. Enable a group only after its official release sources, original baseline and installation qualification are ready.
 
-Use `automate` to build the latest cumulative updates every 48 hours, upload them to R2 and maintain a shared download catalog, without a website API. See [automated publication and Docker setup](https://github.com/AiursoftWeb/anduinosofflinebundles/blob/master/docs/automation.md).
+Use `automate` to build the latest cumulative updates every 48 hours, sign remotely through ESRP Sign without local private keys, upload them to R2 and maintain a shared download catalog, without a website API. See [automated publication and Docker setup](https://github.com/AiursoftWeb/anduinosofflinebundles/blob/master/docs/automation.md).
 
 Use `publish` to upload an installation-qualified bundle to R2 and register it with AnduinOS Home. See [publication and retry behavior](https://github.com/AiursoftWeb/anduinosofflinebundles/blob/master/docs/publication.md).
 
@@ -72,7 +72,7 @@ Use `publish` to upload an installation-qualified bundle to R2 and register it w
 
 Configuration is supplied through the selected command and its options. Build profiles, release source baselines and trusted keyrings are explicit inputs; keep original baselines and trusted keys outside the checkout. Run `anduinos-offline-bundles <command> --help` for that command’s current options.
 
-Inspecting an archive requires an independently trusted keyring, not a key taken from the archive itself. R2 and website publication settings apply only to the publication commands; see the linked guides below.
+Inspecting an archive requires an independently trusted keyring, not a key taken from the archive itself. ESRP Sign, R2 and website publication settings apply only to the build and publication commands; see the linked guides below.
 
 ## Development
 

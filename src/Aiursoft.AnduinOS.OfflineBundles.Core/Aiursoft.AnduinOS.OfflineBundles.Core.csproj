@@ -10,6 +10,7 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="Aiursoft.EsrpSign.SDK" Version="10.0.2" />
     <PackageReference Include="AWSSDK.S3" Version="4.1.2.1" />
   </ItemGroup>
 </Project>

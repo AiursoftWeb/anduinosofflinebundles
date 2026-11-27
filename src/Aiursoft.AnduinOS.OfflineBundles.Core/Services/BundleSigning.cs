@@ -4,28 +4,44 @@ namespace Aiursoft.AnduinOS.OfflineBundles.Core.Services;
 
 public static class BundleSigning
 {
-    public static async Task ValidateIdentityAsync(SigningOptions options, string? expectedSha256,
-        CancellationToken token)
+    public static void ValidateEndpoint(string endpoint)
     {
-        if (!File.Exists(options.TrustedKeyring))
-            throw new FileNotFoundException("An external trusted keyring is required.", options.TrustedKeyring);
-        if (expectedSha256 != null && !string.Equals(expectedSha256,
-                await BundleJson.HashAsync(options.TrustedKeyring, token), StringComparison.OrdinalIgnoreCase))
-            throw new InvalidDataException("The trusted keyring does not match its configured SHA-256.");
-        if (!Directory.Exists(Path.Combine(options.Home, "private-keys-v1.d")))
-            throw new InvalidDataException("The existing signing identity is missing. Restore it before starting the worker.");
-        var keys = await NativeCommand.RunAsync("gpg",
-            ["--homedir", options.Home, "--batch", "--no-tty", "--with-colons", "--list-secret-keys", options.Key],
-            cancellationToken: token);
-        if (!keys.Output.Split('\n').Any(line => line.StartsWith("sec:", StringComparison.Ordinal)))
-            throw new InvalidDataException("The configured private signing key is unavailable.");
+        if (!Uri.TryCreate(endpoint, UriKind.Absolute, out var uri) ||
+            (uri.Scheme != Uri.UriSchemeHttps && !(uri.Scheme == Uri.UriSchemeHttp && uri.IsLoopback)) ||
+            uri.UserInfo.Length != 0 || uri.Query.Length != 0 || uri.Fragment.Length != 0)
+        {
+            throw new ArgumentException("Configure an HTTPS ESRP Sign endpoint without credentials, query or fragment.",
+                nameof(endpoint));
+        }
     }
 
-    public static Task SignAsync(string input, string output, SigningOptions options, bool clearSign,
-        CancellationToken token) => NativeCommand.RunAsync("gpg",
-        ["--homedir", options.Home, "--batch", "--no-tty", "--yes", "--local-user", options.Key,
-            "--armor", "--output", output, clearSign ? "--clearsign" : "--detach-sign", input],
-        cancellationToken: token);
+    public static async Task ValidateIdentityAsync(SigningOptions options, IBundleSigner signer,
+        string? expectedSha256, CancellationToken token)
+    {
+        ValidateEndpoint(options.Endpoint);
+        if (options.KeyId == Guid.Empty)
+        {
+            throw new ArgumentException("A non-empty ESRP Sign key ID is required.", nameof(options));
+        }
+
+        if (!File.Exists(options.TrustedKeyring))
+        {
+            throw new FileNotFoundException("An external trusted keyring is required.", options.TrustedKeyring);
+        }
+
+        if (expectedSha256 != null && !string.Equals(expectedSha256,
+                await BundleJson.HashAsync(options.TrustedKeyring, token), StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidDataException("The trusted keyring does not match its configured SHA-256.");
+        }
+
+        var localKey = await File.ReadAllBytesAsync(options.TrustedKeyring, token);
+        var remoteKey = await signer.GetPublicKeyAsync(options.KeyId, token);
+        if (!remoteKey.AsSpan().SequenceEqual(localKey))
+        {
+            throw new InvalidDataException("The ESRP Sign public key does not match the configured trusted keyring.");
+        }
+    }
 
     public static Task<string> VerifyAsync(string input, string signature, string trustedKeyring, CancellationToken token) =>
         VerifySignatureAsync([signature, input], trustedKeyring, token);

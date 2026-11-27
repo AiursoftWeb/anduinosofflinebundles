@@ -63,7 +63,7 @@ public class BundleWorkflowTests
         var original = _fixture.CreateBaseline("native-original", "2.0.1", "2.0.1-1", "1",
             BundleFixture.Status("native-component", "1").Replace("Architecture: all", $"Architecture: {architecture}"));
         var profile = _fixture.Profile with { Architecture = architecture, Baselines = [original] };
-        var result = await new BundleBuilder().BuildAsync(profile, _fixture.Output, _fixture.Signing);
+        var result = await new BundleBuilder(_fixture.Signer).BuildAsync(profile, _fixture.Output, _fixture.Signing);
         var verified = await BundleArchive.VerifyAsync(result.File, _fixture.Keyring);
         Assert.AreEqual(architecture, verified.Manifest.Architecture);
         Assert.IsTrue(verified.Manifest.Packages.Any(package =>
@@ -82,7 +82,7 @@ public class BundleWorkflowTests
     {
         var original = _fixture.Profile.Baselines[0];
         var profile = _fixture.Profile with { Baselines = [original] };
-        var result = await new BundleBuilder().BuildAsync(profile, _fixture.Output, _fixture.Signing);
+        var result = await new BundleBuilder(_fixture.Signer).BuildAsync(profile, _fixture.Output, _fixture.Signing);
         var verified = await BundleArchive.VerifyAsync(result.File, _fixture.Keyring);
         Assert.HasCount(1, verified.Manifest.Baselines);
         Assert.AreEqual("2.0.0", verified.Manifest.Baselines[0].SystemVersion);
@@ -123,11 +123,11 @@ public class BundleWorkflowTests
             BundleFixture.Status("later-component", "3", "base-library (= 3)")
                 .Replace("Architecture: all", $"Architecture: {architecture}"));
         var before = await BundleJson.HashAsync(later.StatusFile);
-        var incomplete = await new BundleBuilder().BuildAsync(profile, _fixture.Output, _fixture.Signing);
+        var incomplete = await new BundleBuilder(_fixture.Signer).BuildAsync(profile, _fixture.Output, _fixture.Signing);
         var blocked = await BundlePreview.PreviewAsync(incomplete.File, _fixture.Keyring, later.StatusFile, later.OsReleaseFile);
         Assert.AreEqual("blocked", blocked.State);
 
-        var result = await new BundleBuilder().BuildAsync(profile with { CoveragePackages = ["desktop-meta"] },
+        var result = await new BundleBuilder(_fixture.Signer).BuildAsync(profile with { CoveragePackages = ["desktop-meta"] },
             _fixture.Output, _fixture.Signing);
         var verified = await BundleArchive.VerifyAsync(result.File, _fixture.Keyring);
         Assert.HasCount(1, verified.Manifest.Baselines);
@@ -157,7 +157,7 @@ public class BundleWorkflowTests
     {
         await _fixture.AddPackageAsync("broken-desktop", "1", "missing-component");
         await _fixture.PublishRepositoryAsync();
-        await Assert.ThrowsAsync<Exception>(() => new BundleBuilder().BuildAsync(
+        await Assert.ThrowsAsync<Exception>(() => new BundleBuilder(_fixture.Signer).BuildAsync(
             _fixture.Profile with { CoveragePackages = ["broken-desktop"] }, _fixture.Output, _fixture.Signing));
         Assert.IsEmpty(Directory.GetFiles(_fixture.Output, "*.atgz"));
     }
@@ -214,14 +214,14 @@ public class BundleWorkflowTests
         var release = Path.Combine(upstream.Repository, "Release");
         await File.WriteAllTextAsync(release, (await File.ReadAllTextAsync(release))
             .Replace("Origin: Offline Fixture", "Origin: Upstream Fixture", StringComparison.Ordinal));
-        await BundleSigning.SignAsync(release, Path.Combine(upstream.Repository, "InRelease"), upstream.Signing, true, default);
+        await upstream.SignWithGpgAsync(release, Path.Combine(upstream.Repository, "InRelease"), true);
         var profile = _fixture.Profile with { Sources = [.. _fixture.Profile.Sources, .. upstream.Profile.Sources] };
-        await Assert.ThrowsExactlyAsync<InvalidDataException>(() => new BundleBuilder().BuildAsync(profile, _fixture.Output, _fixture.Signing));
+        await Assert.ThrowsExactlyAsync<InvalidDataException>(() => new BundleBuilder(_fixture.Signer).BuildAsync(profile, _fixture.Output, _fixture.Signing));
         Assert.IsEmpty(Directory.GetFiles(_fixture.Output, "*.atgz"));
 
         var preferences = Path.Combine(_fixture.Root, "preferences");
         await File.WriteAllTextAsync(preferences, "Package: *\nPin: release o=Offline Fixture\nPin-Priority: 1001\n");
-        var result = await new BundleBuilder().BuildAsync(profile with { PreferencesFile = preferences }, _fixture.Output, _fixture.Signing);
+        var result = await new BundleBuilder(_fixture.Signer).BuildAsync(profile with { PreferencesFile = preferences }, _fixture.Output, _fixture.Signing);
         Assert.AreEqual("2.0.5", result.TargetVersion);
         Assert.AreEqual(await File.ReadAllTextAsync(preferences), await File.ReadAllTextAsync(Path.Combine(result.File + ".inputs", "preferences")));
         var recorded = ProfileReader.Read(Path.Combine(result.File + ".inputs", "profile.json"));
@@ -250,7 +250,7 @@ public class BundleWorkflowTests
         Assert.ThrowsExactly<FileNotFoundException>(() => ProfileReader.Read(path));
         var loaded = ProfileReader.Read(path, _fixture.Root);
         Assert.AreEqual(preferences, loaded.PreferencesFile);
-        var built = await new BundleBuilder().BuildAsync(loaded, _fixture.Output, _fixture.Signing);
+        var built = await new BundleBuilder(_fixture.Signer).BuildAsync(loaded, _fixture.Output, _fixture.Signing);
         Assert.AreEqual("2.0.5", built.TargetVersion);
         await File.WriteAllTextAsync(path, BundleJson.Write(_fixture.Profile));
         Assert.AreEqual(_fixture.Keyring, ProfileReader.Read(path).Sources[0].Keyring);
@@ -319,7 +319,7 @@ public class BundleWorkflowTests
         var manifest = original.Manifest with { RequiredFeatures = ["apt-repository-v1", "unknown-required-capability"] };
         var path = Path.Combine(directory, "manifest.json");
         await File.WriteAllTextAsync(path, BundleJson.Write(manifest));
-        await BundleSigning.SignAsync(path, Path.Combine(directory, "manifest.asc"), _fixture.Signing, false, default);
+        await _fixture.Signer.SignAsync(_fixture.KeyId, path, Path.Combine(directory, "manifest.asc"), false, default);
         var output = Path.Combine(_fixture.Root, "future.atgz");
         await BundleArchive.WriteAsync(directory, output, manifest, default);
         await Assert.ThrowsExactlyAsync<InvalidDataException>(() => BundleArchive.VerifyAsync(output, _fixture.Keyring));
@@ -339,7 +339,7 @@ public class BundleWorkflowTests
         await Assert.ThrowsExactlyAsync<InvalidDataException>(() => BundlePreview.PreviewAsync(result.File, _fixture.Keyring, baseline.StatusFile, baseline.OsReleaseFile));
     }
 
-    private Task<BuildResult> BuildAsync() => new BundleBuilder().BuildAsync(_fixture.Profile, _fixture.Output, _fixture.Signing);
+    private Task<BuildResult> BuildAsync() => new BundleBuilder(_fixture.Signer).BuildAsync(_fixture.Profile, _fixture.Output, _fixture.Signing);
 
     [TestMethod]
     public async Task OlderOsBundleDoesNotTouchANewerSystem()
@@ -361,7 +361,7 @@ public class BundleWorkflowTests
         {
             Stages = [new UpdateStage { Operation = "install", Packages = ["replacement"] }, new UpdateStage { Operation = "dist-upgrade" }]
         };
-        var result = await new BundleBuilder().BuildAsync(profile, _fixture.Output, _fixture.Signing);
+        var result = await new BundleBuilder(_fixture.Signer).BuildAsync(profile, _fixture.Output, _fixture.Signing);
         var blocked = _fixture.CreateBaseline("conflict", "2.0.0", "2.0.0-1", "1", BundleFixture.Status("user-app", "1"));
         var preview = await BundlePreview.PreviewAsync(result.File, _fixture.Keyring, blocked.StatusFile, blocked.OsReleaseFile);
         Assert.AreEqual("blocked", preview.State);
@@ -409,7 +409,7 @@ public class BundleWorkflowTests
         await _fixture.PublishRepositoryAsync();
         var plain = await BuildAsync();
         var profile = _fixture.Profile with { Bootstrap = new UpdaterBootstrap { MinimumVersion = "2.1.0-2" } };
-        var result = await new BundleBuilder().BuildAsync(profile, _fixture.Output, _fixture.Signing);
+        var result = await new BundleBuilder(_fixture.Signer).BuildAsync(profile, _fixture.Output, _fixture.Signing);
         var root = Path.Combine(_fixture.Root, "bootstrap-extracted");
         var verified = await BundleArchive.VerifyAsync(result.File, _fixture.Keyring, root);
         Assert.AreNotEqual(plain.BatchId, result.BatchId);
@@ -462,14 +462,14 @@ public class BundleWorkflowTests
             Baselines = [baseline], AllowedRemovals = ["user-editor"]
         };
         await Assert.ThrowsExactlyAsync<InvalidDataException>(() =>
-            new BundleBuilder().BuildAsync(profile, _fixture.Output, _fixture.Signing));
+            new BundleBuilder(_fixture.Signer).BuildAsync(profile, _fixture.Output, _fixture.Signing));
     }
 
     private async Task<string> ResignAsync(string directory, BundleManifest manifest, string name)
     {
         var path = Path.Combine(directory, "manifest.json");
         await File.WriteAllTextAsync(path, BundleJson.Write(manifest));
-        await BundleSigning.SignAsync(path, Path.Combine(directory, "manifest.asc"), _fixture.Signing, false, default);
+        await _fixture.Signer.SignAsync(_fixture.KeyId, path, Path.Combine(directory, "manifest.asc"), false, default);
         var output = Path.Combine(_fixture.Root, name);
         await BundleArchive.WriteAsync(directory, output, manifest, default);
         return output;

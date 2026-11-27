@@ -6,13 +6,18 @@
 
 Use a dedicated local state volume and one worker replica. Do not run a second publisher against the same catalog from another machine. A lifetime file lock prevents overlapping invocations sharing the state volume; conditional catalog writes detect conflicting remote changes but are not a distributed worker lease.
 
-Copy [automation.example.json](../profiles/automation.example.json) outside the checkout and replace its endpoint, bucket and signing fingerprint. Paths are absolute. The included example enables only the Resolute/amd64 profile. The image also includes Resolute/arm64 and both Stonking profiles. Add a job only after preparing and qualifying that suite, release line and architecture's profile and real baseline inputs. The example is not evidence that all four target groups are ready.
+Copy [automation.example.json](../profiles/automation.example.json) outside the checkout and replace its R2 endpoint, bucket, ESRP Sign endpoint, signing key ID and trusted keyring path. Paths are absolute. The included example enables only the Resolute/amd64 profile. The image also includes Resolute/arm64 and both Stonking profiles. Add a job only after preparing and qualifying that suite, release line and architecture's profile and real baseline inputs. The example is not evidence that all four target groups are ready.
 
-Supply the [release build inputs](release-builds.md) and a signing key trusted by the desktop updater. Keep the signing home private and writable by the worker's user, because GnuPG creates locks and agent sockets. Public keyrings and baseline inputs can be read-only. Do not publish archives signed with temporary test keys as official updates.
+Supply the [release build inputs](release-builds.md) and the binary public keyring trusted by the desktop updater. Private signing keys never live on the worker host or inside the container; signing calls the configured ESRP Sign service over HTTPS, and local verification uses only `gpgv` against the external public keyring. Public keyrings and baseline inputs can be read-only. Do not publish archives signed with temporary test keys as official updates.
 
-The worker checks that the configured private signing key already exists before processing jobs or waiting for the next run. It never generates or replaces an identity. Set optional `trusted_keyring_sha256` to the approved public keyring's SHA-256 to reject a changed keyring at startup. Existing settings without this field remain supported. Mount the settings file read-only at `/config/automation.json`; the container's default command reads it directly, without a shell wrapper or JSON environment variable.
+At startup, before processing jobs or waiting for the next run, the worker checks that the local `trusted_keyring` exists, matches optional `trusted_keyring_sha256`, and matches byte-for-byte the public key returned by ESRP Sign for `signing.key_id`. Set optional `trusted_keyring_sha256` to the approved public keyring's SHA-256 to reject a changed keyring at startup. Existing settings without this field remain supported. Mount the settings file read-only at `/config/automation.json`; the container's default command reads it directly, without a shell wrapper or JSON environment variable.
 
-Set `ANDUINOS_R2_ACCESS_KEY` and `ANDUINOS_R2_SECRET_KEY` in the runtime environment. The credential needs object read, write and delete access to the selected bucket. No website URL, website token, database, or inbound network port is needed. Never put credentials in the settings file, image, source repository, or logs.
+Set these four secrets in the runtime environment:
+
+- `ANDUINOS_R2_ACCESS_KEY` and `ANDUINOS_R2_SECRET_KEY`: object read, write and delete access to the selected bucket.
+- `ESRPSIGN_API_KEY` and `ESRPSIGN_KEY_PASSPHRASE`: personal API key with company-key signing permission and passphrase for `signing.key_id`.
+
+No website URL, website token, database, local private key volume, or inbound network port is needed. Never put credentials in the settings file, image, source repository, or logs.
 
 Run the currently due jobs once:
 
@@ -38,14 +43,13 @@ Build using the repository's normal Docker workflow:
 docker build -t anduinos-offline-bundles .
 ```
 
-The image contains the .NET CLI, profiles and native APT/GnuPG tools. It runs as UID 10001. Prepare a dedicated `/data` volume and a signing home writable by this user. Mount deployment configuration and baseline inputs separately; do not bake secrets into the image.
+The image contains the .NET CLI, profiles, APT tools and `gpgv` (no full `gnupg` private-key toolchain). It runs as UID 10001. Prepare a dedicated `/data` volume writable by this user. Mount deployment configuration and baseline inputs separately as read-only; do not bake secrets into the image.
 
 ```bash
 docker run --name offline-bundles --restart unless-stopped \
-  --env-file /etc/anduinos-offline-bundles/r2.env \
+  --env-file /etc/anduinos-offline-bundles/worker.env \
   --mount type=bind,src=/etc/anduinos-offline-bundles/config,dst=/config,readonly \
   --mount type=bind,src=/var/lib/anduinos-offline-bundles/inputs,dst=/inputs,readonly \
-  --mount type=bind,src=/var/lib/anduinos-offline-bundles/signing,dst=/signing \
   --mount type=bind,src=/var/lib/anduinos-offline-bundles/data,dst=/data \
   anduinos-offline-bundles
 ```
@@ -76,7 +80,7 @@ Website readers should sort each group by numeric target version, then creation 
 
 ## Failure and retention behavior
 
-1. Build using authenticated sources, verify signatures and baseline APT dependency closure, then persist the pending archive name locally.
+1. Build using authenticated sources, sign repository metadata and manifest via ESRP Sign, verify signatures locally with `gpgv` and check baseline APT dependency closure, then persist the pending archive name locally.
 2. Upload the immutable archive and read it back to verify its full SHA256 and size.
 3. Read the current catalog and conditionally replace it using its ETag (`If-Match`), or `If-None-Match: *` on first publication. The catalog is updated last; readers see complete old or new JSON, never a partial upload. Other groups remain unchanged.
 4. Keep the newest three releases in each group. Move displaced releases into `retired` with a deletion time at least 24 hours later. Catalog listings can therefore contain twelve visible releases for four configured groups while storage temporarily holds more than twelve files.

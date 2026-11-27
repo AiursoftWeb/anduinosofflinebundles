@@ -23,6 +23,11 @@ public sealed class AutomateHandler : BundleCommandHandler
         var secret = Environment.GetEnvironmentVariable("ANDUINOS_R2_SECRET_KEY");
         if (string.IsNullOrWhiteSpace(access) || string.IsNullOrWhiteSpace(secret))
             throw new ArgumentException("Set ANDUINOS_R2_ACCESS_KEY and ANDUINOS_R2_SECRET_KEY.");
+        var esrpApiKey = Environment.GetEnvironmentVariable("ESRPSIGN_API_KEY");
+        var esrpPassphrase = Environment.GetEnvironmentVariable("ESRPSIGN_KEY_PASSPHRASE");
+        if (string.IsNullOrWhiteSpace(esrpApiKey) || string.IsNullOrWhiteSpace(esrpPassphrase))
+            throw new ArgumentException("Set ESRPSIGN_API_KEY and ESRPSIGN_KEY_PASSPHRASE.");
+        using var signer = new EsrpBundleSigner(settings.Signing.Endpoint, esrpApiKey, esrpPassphrase);
         using var s3 = new AmazonS3Client(new BasicAWSCredentials(access, secret), new AmazonS3Config
         {
             ServiceURL = settings.ServiceUrl, ForcePathStyle = true, AuthenticationRegion = "auto",
@@ -37,7 +42,7 @@ public sealed class AutomateHandler : BundleCommandHandler
             // ReSharper disable once AccessToDisposedClosure
             stopping.Cancel();
         });
-        var worker = new AutomationWorker(settings, new R2CatalogStore(s3, settings.Bucket),
+        var worker = new AutomationWorker(settings, new R2CatalogStore(s3, settings.Bucket), signer,
             message => Console.Error.WriteLine($"{DateTimeOffset.UtcNow:O} {message}"));
         return await worker.RunAsync(result.GetValue(OnceOption), stopping.Token);
     }

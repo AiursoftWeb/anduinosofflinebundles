@@ -4,18 +4,18 @@
     "net10.0": {
       "Aiursoft.CSTools": {
         "type": "Direct",
-        "requested": "[10.0.8, )",
-        "resolved": "10.0.8",
-        "contentHash": "pSzM2eMg1U4hb9vlO6y5zwUC1L1w9r9FO5JQVKtOHEOhWMxyXiKM4KPfBW7I3a4/o8vKjGeKWqyzxDvgTVWYkA==",
+        "requested": "[10.0.9, )",
+        "resolved": "10.0.9",
+        "contentHash": "z2eE4F+A5TJLQmAUe8VwnYadvXczL+8uGbPg2jcFcPwLaQEXQ0MGSgQPkLNwX8BF1IWrcmBPKEov0AWfO1e0CA==",
         "dependencies": {
           "Aiursoft.Scanner.Abstractions": "10.0.1"
         }
       },
       "coverlet.collector": {
         "type": "Direct",
-        "requested": "[10.1.0, )",
-        "resolved": "10.1.0",
-        "contentHash": "SlYCIHnBYxINSUpR75SiM5JEmnx11pqT+Ac/C/fUqTTA0dLPl9eYzmFXKKuxmQhL3ZdTQl4PBD3YdAxAauaKLQ=="
+        "requested": "[10.1.1, )",
+        "resolved": "10.1.1",
+        "contentHash": "iRWGpNzKG6/pA0VzAt+WDzFAPMHvs/E4ZxeSYiEaAa7MzFhAcWcIWd7RDNLhCBenpSNdJCwm42UcQP4nGUbwJQ=="
       },
       "JunitXml.TestLogger": {
         "type": "Direct",
@@ -46,6 +46,34 @@
           "Microsoft.Testing.Platform.MSBuild": "2.5.3"
         }
       },
+      "Aiursoft.AiurProtocol": {
+        "type": "Transitive",
+        "resolved": "10.0.34",
+        "contentHash": "9+hq7bgLd2f5dOQ4cidJuIAW2Y1Ljjajgb0WtVagsJOiQVsW0LdXLEGR8I22Znb8KBG72futO/uGDYZ94qChYg==",
+        "dependencies": {
+          "Aiursoft.AiurProtocol.Abstractions": "10.0.3",
+          "Aiursoft.CSTools": "10.0.9",
+          "Aiursoft.Canon": "10.0.19",
+          "Microsoft.Extensions.Http": "10.0.15"
+        }
+      },
+      "Aiursoft.AiurProtocol.Abstractions": {
+        "type": "Transitive",
+        "resolved": "10.0.3",
+        "contentHash": "MV5ZTa+sfUx3VoUzS/p+6S/mIsxYlbAZalXF/4ZollYSX7IhpoBpZersHHvQypKEEfqQ7PV5ywO6mbu1GNhaOg==",
+        "dependencies": {
+          "Newtonsoft.Json": "13.0.4"
+        }
+      },
+      "Aiursoft.Canon": {
+        "type": "Transitive",
+        "resolved": "10.0.19",
+        "contentHash": "Z9stZcIC6IhJj3qp2/vsZhkAVt9405RfItLj9Pqz47rLyOoR1FyL7evOJ4YN535Z+XPSBhr3JL9Hh5sRPsg05w==",
+        "dependencies": {
+          "Aiursoft.Scanner.Abstractions": "10.0.1",
+          "Microsoft.Extensions.Caching.Memory": "10.0.15"
+        }
+      },
       "Aiursoft.CommandFramework": {
         "type": "Transitive",
         "resolved": "10.0.19",
@@ -61,6 +89,14 @@
         "resolved": "10.0.1",
         "contentHash": "6ferr3W/oXqhoblaW6UaC9xYsjUwjtEdLIHJLqYwDTzxGrpOxrg42FBwqvTQlW66OHTpRUOCtmKSA0LmjbPUjw=="
       },
+      "Aiursoft.EsrpSign.SDK": {
+        "type": "Transitive",
+        "resolved": "10.0.2",
+        "contentHash": "HwurMHU7N0hWx7Cc9Nftw4pNw4YJfZhAjVLFk6n438Csud8YhizNHhEyAoBZ8aA96c1ZB/pHvxGGHmdrJbPWNg==",
+        "dependencies": {
+          "Aiursoft.AiurProtocol": "10.0.34"
+        }
+      },
       "Aiursoft.Scanner.Abstractions": {
         "type": "Transitive",
         "resolved": "10.0.1",
@@ -68,15 +104,24 @@
       },
       "AWSSDK.Core": {
         "type": "Transitive",
-        "resolved": "4.0.103",
-        "contentHash": "DCOotOZU/uuGTJHyhdzDaISArck4hYC6Y9OzZM8/PI+G4AhtNaD1hszFG1Giwdpod0Sn7gxxlx6xUfcPKNeQ8Q=="
+        "resolved": "4.1.1.1",
+        "contentHash": "paZNy+g/hXMCsEpWvmOFr14x9gVzIY2JRSzSk+nXpKcnaASxEFBMWE4CNBuI/WwGN1ygTwojRTsPRn3yXuhSYQ==",
+        "dependencies": {
+          "AWSSDK.Extensions.Numerics": "[4.1.0, 5.0.0)",
+          "System.IO.Hashing": "11.0.0"
+        }
+      },
+      "AWSSDK.Extensions.Numerics": {
+        "type": "Transitive",
+        "resolved": "4.1.0",
+        "contentHash": "hhoiXT1aUyVgIiQbQoqG3L1EEneqXDh2GKyH5izUlO6Rzi9GAAi8S6mlLiVwow23+EGg77zHjdmUi+ia3RSUTg=="
       },
       "AWSSDK.S3": {
         "type": "Transitive",
-        "resolved": "4.0.104.12",
-        "contentHash": "z4rPjjQoPDuWtxk2utbO/I+xNEqA+ac7/cDjwd4KvFrYHfwatJ1IVwjQ7ukaSlSnqY5e9+Q6YHtu87LBJNj+SQ==",
+        "resolved": "4.1.2.1",
+        "contentHash": "5NYXkjBc8uQz5RFtpubw6NcjFahIiVTIq4rucZv6y8q9QSaO33PWsJHnkxrtmXRCXft0Fke1gnv6gvMP5wR1nw==",
         "dependencies": {
-          "AWSSDK.Core": "[4.0.103, 5.0.0)"
+          "AWSSDK.Core": "[4.1.1.1, 5.0.0)"
         }
       },
       "Microsoft.ApplicationInsights": {
@@ -88,6 +133,26 @@
         "type": "Transitive",
         "resolved": "18.12.0",
         "contentHash": "OhOPSaCAQhBJgXF1OrX0uK3eTkwZ1XnM44iGLZplYgKrmgKzQUdv9xtGGaE568RuQ738TlrTJ3pm9aWL5FH7iw=="
+      },
+      "Microsoft.Extensions.Caching.Abstractions": {
+        "type": "Transitive",
+        "resolved": "10.0.15",
+        "contentHash": "hzquYYxIDAOh5DZjqfWhm9jUILFguywE8KCBg+Sp4WYY1wND67qWllGXY5h2DrKneSGlqdFa0njngVT6sT+Brg==",
+        "dependencies": {
+          "Microsoft.Extensions.Primitives": "10.0.15"
+        }
+      },
+      "Microsoft.Extensions.Caching.Memory": {
+        "type": "Transitive",
+        "resolved": "10.0.15",
+        "contentHash": "uTfEHyTAxSqly3dCfqG5jVh5LZBU3pdipc5I1XLjPB7tjPV6ZejQjdiARt40X6B2yvf/4/v7hNT5D/veuf6zRA==",
+        "dependencies": {
+          "Microsoft.Extensions.Caching.Abstractions": "10.0.15",
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.15",
+          "Microsoft.Extensions.Logging.Abstractions": "10.0.15",
+          "Microsoft.Extensions.Options": "10.0.15",
+          "Microsoft.Extensions.Primitives": "10.0.15"
+        }
       },
       "Microsoft.Extensions.Configuration": {
         "type": "Transitive",
@@ -263,6 +328,19 @@
           "Microsoft.Extensions.Logging.Abstractions": "10.0.15"
         }
       },
+      "Microsoft.Extensions.Http": {
+        "type": "Transitive",
+        "resolved": "10.0.15",
+        "contentHash": "ha8VdL1mvHkRUbRyXBfhMwCfbl02YQvCzZe72jQRFrvrRCbW2riFha52Vb84j8YpAcn/ld/B/2oQAsDj9gvbyg==",
+        "dependencies": {
+          "Microsoft.Extensions.Configuration.Abstractions": "10.0.15",
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.15",
+          "Microsoft.Extensions.Diagnostics": "10.0.15",
+          "Microsoft.Extensions.Logging": "10.0.15",
+          "Microsoft.Extensions.Logging.Abstractions": "10.0.15",
+          "Microsoft.Extensions.Options": "10.0.15"
+        }
+      },
       "Microsoft.Extensions.Logging": {
         "type": "Transitive",
         "resolved": "10.0.15",
@@ -424,6 +502,11 @@
           "MSTest.Analyzers": "4.5.3"
         }
       },
+      "Newtonsoft.Json": {
+        "type": "Transitive",
+        "resolved": "13.0.4",
+        "contentHash": "pdgNNMai3zv51W5aq268sujXUyx7SNdE2bj1wZcWjAQrKMFZV260lbqYop1d2GM67JI1huLRwxo9ZqnfF/lC6A=="
+      },
       "System.CommandLine": {
         "type": "Transitive",
         "resolved": "3.0.0",
@@ -433,6 +516,11 @@
         "type": "Transitive",
         "resolved": "10.0.15",
         "contentHash": "d1ynyO/BvCyi8SI1m6/xASazxrZm20V/mTDJay4qmL947RsA5MEiMk1JWvafw6JX005VVBAHvjWQP1dRRBvYKw=="
+      },
+      "System.IO.Hashing": {
+        "type": "Transitive",
+        "resolved": "11.0.0",
+        "contentHash": "U+Bv2qCYt6eONi+arSP0QIp4uTO6os6uceBsqiAwruZ+Wo2HrRhO/0tj38M9URJtS+4DhAtT3ka2TGNFYsnhyQ=="
       },
       "aiursoft.anduinos.offlinebundles": {
         "type": "Project",
@@ -444,7 +532,8 @@
       "aiursoft.anduinos.offlinebundles.core": {
         "type": "Project",
         "dependencies": {
-          "AWSSDK.S3": "[4.0.104.12, )"
+          "AWSSDK.S3": "[4.1.2.1, )",
+          "Aiursoft.EsrpSign.SDK": "[10.0.2, )"
         }
       }
     }

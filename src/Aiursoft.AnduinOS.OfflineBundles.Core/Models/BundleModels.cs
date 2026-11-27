@@ -91,7 +91,7 @@ public sealed record BundleManifest
     public required SortedDictionary<string, FileDigest> Files { get; init; }
 }
 
-public sealed record SigningOptions(string Home, string Key, string TrustedKeyring);
+public sealed record SigningOptions(string Endpoint, Guid KeyId, string TrustedKeyring);
 public sealed record BuildResult(string File, FileDigest Content, string BatchId, string TargetVersion, int PackageCount);
 public sealed record VerificationResult(BundleManifest Manifest, string SigningFingerprint, long UnpackedBytes);
 public sealed record PreviewResult(string CurrentVersion, string TargetVersion, string BatchId,

@@ -6,24 +6,30 @@ namespace Aiursoft.AnduinOS.OfflineBundles.Tests;
 
 internal sealed class BundleFixture : IDisposable
 {
+    public const string KeyIdentity = "offline-bundle-tests@example.invalid";
+
     public string Root { get; } = Path.Combine(Path.GetTempPath(), "offline-tests-" + Guid.NewGuid().ToString("N"));
     public string Repository => Path.Combine(Root, "repository");
     public string Keyring => Path.Combine(Root, "trusted.gpg");
-    public SigningOptions Signing => new(Path.Combine(Root, "signing"), "offline-bundle-tests@example.invalid", Keyring);
+    public string SigningHome => Path.Combine(Root, "signing");
+    public Guid KeyId { get; } = Guid.NewGuid();
+    public SigningOptions Signing => new("https://esrp-sign.example", KeyId, Keyring);
+    public IBundleSigner Signer { get; private set; } = null!;
     public string Output => Path.Combine(Root, "output");
     public BuildProfile Profile { get; private set; } = null!;
 
     public async Task InitializeAsync()
     {
         Directory.CreateDirectory(Repository);
-        Directory.CreateDirectory(Signing.Home);
+        Directory.CreateDirectory(SigningHome);
         if (!OperatingSystem.IsWindows())
         {
-            File.SetUnixFileMode(Signing.Home, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+            File.SetUnixFileMode(SigningHome, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
         }
-        await NativeCommand.RunAsync("gpg", ["--homedir", Signing.Home, "--batch", "--pinentry-mode", "loopback",
-            "--passphrase", "", "--quick-generate-key", Signing.Key, "ed25519", "sign", "1d"]);
-        await NativeCommand.RunAsync("gpg", ["--homedir", Signing.Home, "--batch", "--output", Keyring, "--export"]);
+        await NativeCommand.RunAsync("gpg", ["--homedir", SigningHome, "--batch", "--pinentry-mode", "loopback",
+            "--passphrase", "", "--quick-generate-key", KeyIdentity, "ed25519", "sign", "1d"]);
+        await NativeCommand.RunAsync("gpg", ["--homedir", SigningHome, "--batch", "--output", Keyring, "--export"]);
+        Signer = new TestGpgSigner(SigningHome, KeyIdentity, new Dictionary<Guid, string> { [KeyId] = Keyring });
         await AddPackageAsync("anduinos-core-system", "2.0.5-1", "base-library (>= 5)", osVersion: "2.0.5");
         await AddPackageAsync("base-library", "5");
         await AddPackageAsync("vim-common", "5");
@@ -36,6 +42,12 @@ internal sealed class BundleFixture : IDisposable
                 CreateBaseline("intermediate", "2.0.3", "2.0.3-1", "3")]
         };
     }
+
+    public Task SignWithGpgAsync(string input, string output, bool clearSign, CancellationToken token = default) =>
+        NativeCommand.RunAsync("gpg",
+            ["--homedir", SigningHome, "--batch", "--no-tty", "--yes", "--local-user", KeyIdentity,
+                "--armor", "--output", output, clearSign ? "--clearsign" : "--detach-sign", input],
+            cancellationToken: token);
 
     public BaselineDefinition CreateBaseline(string name, string version, string coreVersion, string libraryVersion,
         string extra = "", bool hold = false)
@@ -95,7 +107,7 @@ internal sealed class BundleFixture : IDisposable
         File.WriteAllText(release, "Origin: Offline Fixture\nSuite: resolute\nCodename: resolute\nArchitectures: amd64 arm64 all\nDate: " +
             DateTimeOffset.UtcNow.ToString("ddd, dd MMM yyyy HH:mm:ss +0000", CultureInfo.InvariantCulture) +
             $"\nSHA256:\n {await BundleJson.HashAsync(packages)} {new FileInfo(packages).Length} Packages\n");
-        await BundleSigning.SignAsync(release, Path.Combine(Repository, "InRelease"), Signing, true, default);
+        await SignWithGpgAsync(release, Path.Combine(Repository, "InRelease"), true);
     }
 
     public static string Status(string name, string version, string? depends = null, bool hold = false) =>
@@ -107,5 +119,31 @@ internal sealed class BundleFixture : IDisposable
     public void Dispose()
     {
         if (Directory.Exists(Root)) Directory.Delete(Root, recursive: true);
+    }
+
+    private sealed class TestGpgSigner(string home, string key, IReadOnlyDictionary<Guid, string> keyrings) : IBundleSigner
+    {
+        public async Task<byte[]> GetPublicKeyAsync(Guid keyId, CancellationToken token)
+        {
+            if (!keyrings.TryGetValue(keyId, out var keyringPath))
+            {
+                throw new InvalidDataException("The requested ESRP Sign key ID was not found.");
+            }
+
+            return await File.ReadAllBytesAsync(keyringPath, token);
+        }
+
+        public Task SignAsync(Guid keyId, string inputPath, string outputPath, bool clearSign, CancellationToken token)
+        {
+            if (!keyrings.ContainsKey(keyId))
+            {
+                throw new InvalidDataException("The requested ESRP Sign key ID was not found.");
+            }
+
+            return NativeCommand.RunAsync("gpg",
+                ["--homedir", home, "--batch", "--no-tty", "--yes", "--local-user", key,
+                    "--armor", "--output", outputPath, clearSign ? "--clearsign" : "--detach-sign", inputPath],
+                cancellationToken: token);
+        }
     }
 }

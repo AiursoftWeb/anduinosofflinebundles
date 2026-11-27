@@ -19,23 +19,39 @@ public class AutomationTests
         };
         var store = new CatalogStorage();
         await Assert.ThrowsExactlyAsync<InvalidDataException>(() =>
-            new AutomationWorker(settings, store, _ => { }).RunAsync(true, default));
+            new AutomationWorker(settings, store, fixture.Signer, _ => { }).RunAsync(true, default));
         Assert.IsEmpty(store.Events);
         Assert.IsFalse(File.Exists(Path.Combine(settings.StateDirectory, "schedule.json")));
-        await BundleSigning.ValidateIdentityAsync(fixture.Signing, await BundleJson.HashAsync(fixture.Keyring), default);
+        await BundleSigning.ValidateIdentityAsync(fixture.Signing, fixture.Signer, await BundleJson.HashAsync(fixture.Keyring), default);
         Assert.ThrowsExactly<ArgumentException>(() => AutomationWorker.Validate(settings with { TrustedKeyringSha256 = "not-a-hash" }));
     }
 
     [TestMethod]
-    public async Task MissingPrivateIdentityIsNotRecreated()
+    public async Task RemoteSigningKeyMismatchAndInvalidSettingsAreRejected()
     {
         using var fixture = new BundleFixture();
         await fixture.InitializeAsync();
-        var missing = fixture.Signing with { Home = Path.Combine(fixture.Root, "missing-signing") };
-        await Assert.ThrowsExactlyAsync<InvalidDataException>(() => BundleSigning.ValidateIdentityAsync(missing, null, default));
-        Assert.IsFalse(Directory.Exists(missing.Home));
-        await Assert.ThrowsAsync<Exception>(() => BundleSigning.ValidateIdentityAsync(
-            fixture.Signing with { Key = "not-the-signing-key@example.invalid" }, null, default));
+        var signing = fixture.Signing;
+        await Assert.ThrowsExactlyAsync<InvalidDataException>(() => BundleSigning.ValidateIdentityAsync(
+            signing with { KeyId = Guid.NewGuid() }, fixture.Signer, null, default));
+        await Assert.ThrowsExactlyAsync<FileNotFoundException>(() => BundleSigning.ValidateIdentityAsync(
+            signing with { TrustedKeyring = Path.Combine(fixture.Root, "missing.gpg") }, fixture.Signer, null, default));
+        var wrongSigner = new StaticPublicKeySigner([1, 2, 3, 4]);
+        await Assert.ThrowsExactlyAsync<InvalidDataException>(() => BundleSigning.ValidateIdentityAsync(
+            signing, wrongSigner, null, default));
+
+        var settings = new AutomationSettings
+        {
+            ServiceUrl = "https://storage.example", Bucket = "updates", StateDirectory = Path.Combine(fixture.Root, "worker"),
+            Signing = signing,
+            Jobs = [new AutomationJob("resolute-amd64", Path.Combine(fixture.Root, "profile.json"), fixture.Root, "Updates.")]
+        };
+        Assert.ThrowsExactly<ArgumentException>(() => AutomationWorker.Validate(
+            settings with { Signing = signing with { Endpoint = "http://esrp-sign.example" } }));
+        Assert.ThrowsExactly<ArgumentException>(() => AutomationWorker.Validate(
+            settings with { Signing = signing with { KeyId = Guid.Empty } }));
+        Assert.ThrowsExactly<ArgumentException>(() => AutomationWorker.Validate(
+            settings with { Signing = signing with { TrustedKeyring = "relative.gpg" } }));
     }
 
     [TestMethod]
@@ -54,7 +70,7 @@ public class AutomationTests
                 await fixture.AddPackageAsync("anduinos-core-system", $"2.0.{version}-1", "base-library (>= 5)", osVersion: $"2.0.{version}");
                 await fixture.PublishRepositoryAsync();
             }
-            var built = await new BundleBuilder().BuildAsync(fixture.Profile, fixture.Output, fixture.Signing);
+            var built = await new BundleBuilder(fixture.Signer).BuildAsync(fixture.Profile, fixture.Output, fixture.Signing);
             var release = await publisher.PublishAsync(built.File, fixture.Keyring, "Cumulative updates.", default);
             first ??= release;
             Assert.AreEqual(version.ToString(), release.Update.TargetVersion.Split('.')[2]);
@@ -81,6 +97,7 @@ public class AutomationTests
     {
         using var fixture = new BundleFixture();
         await fixture.InitializeAsync();
+        var signer = fixture.Signer;
         var profilePath = Path.Combine(fixture.Root, "profile.json");
         await File.WriteAllTextAsync(profilePath, BundleJson.Write(fixture.Profile));
         var settings = new AutomationSettings
@@ -94,17 +111,17 @@ public class AutomationTests
         async Task<BuildResult> Build(BuildProfile profile, string output, SigningOptions signing, CancellationToken token)
         {
             builds++;
-            return await new BundleBuilder().BuildAsync(profile, output, signing, token);
+            return await new BundleBuilder(signer).BuildAsync(profile, output, signing, token);
         }
-        var worker = new AutomationWorker(settings, store, _ => { }, clock, Build);
+        var worker = new AutomationWorker(settings, store, signer, _ => { }, clock, Build);
         Assert.AreEqual(1, await worker.RunAsync(true, default));
         Assert.HasCount(1, store.Catalog.Releases); // Remote write succeeded, local acknowledgement did not.
         Assert.AreEqual(1, builds);
-        Assert.AreEqual(0, await new AutomationWorker(settings, store, _ => { }, clock, Build).RunAsync(true, default));
+        Assert.AreEqual(0, await new AutomationWorker(settings, store, signer, _ => { }, clock, Build).RunAsync(true, default));
         Assert.AreEqual(1, builds); // Restart respects the retry schedule.
         clock.Advance(TimeSpan.FromMinutes(61));
         store.LoseWriteResponse = false;
-        Assert.AreEqual(0, await new AutomationWorker(settings, store, _ => { }, clock, Build).RunAsync(true, default));
+        Assert.AreEqual(0, await new AutomationWorker(settings, store, signer, _ => { }, clock, Build).RunAsync(true, default));
         Assert.AreEqual(1, builds);
         Assert.AreEqual(1, store.Uploads);
         Assert.HasCount(1, store.Catalog.Releases);
@@ -118,7 +135,7 @@ public class AutomationTests
     {
         using var fixture = new BundleFixture();
         await fixture.InitializeAsync();
-        var build = await new BundleBuilder().BuildAsync(fixture.Profile, fixture.Output, fixture.Signing);
+        var build = await new BundleBuilder(fixture.Signer).BuildAsync(fixture.Profile, fixture.Output, fixture.Signing);
         var store = new CatalogStorage { FailVerification = true };
         var publisher = new CatalogPublisher(store);
         await Assert.ThrowsExactlyAsync<InvalidDataException>(() => publisher.PublishAsync(build.File, fixture.Keyring, "Updates.", default));
@@ -138,7 +155,7 @@ public class AutomationTests
     {
         using var fixture = new BundleFixture();
         await fixture.InitializeAsync();
-        var build = await new BundleBuilder().BuildAsync(fixture.Profile, fixture.Output, fixture.Signing);
+        var build = await new BundleBuilder(fixture.Signer).BuildAsync(fixture.Profile, fixture.Output, fixture.Signing);
         var update = await BundlePublisher.DescribeAsync(build.File, fixture.Keyring, "Updates.", default);
         var newer = new CatalogRelease(update with { BatchId = new string('b', 64), TargetVersion = "2.0.10" }, DateTimeOffset.UtcNow);
         var other = new CatalogRelease(update with { BatchId = new string('c', 64), Architecture = "arm64" }, DateTimeOffset.UtcNow);
@@ -162,7 +179,7 @@ public class AutomationTests
                 new AutomationJob("working", profilePath, fixture.Root, "Updates.")]
         };
         var store = new CatalogStorage();
-        var worker = new AutomationWorker(settings, store, _ => { });
+        var worker = new AutomationWorker(settings, store, fixture.Signer, _ => { });
         Directory.CreateDirectory(settings.StateDirectory);
         await using (new FileStream(Path.Combine(settings.StateDirectory, "worker.lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None))
         {
@@ -172,11 +189,18 @@ public class AutomationTests
         Assert.HasCount(1, store.Catalog.Releases);
         var retrySettings = settings with { StateDirectory = Path.Combine(fixture.Root, "timeout-worker"), Jobs = [settings.Jobs[1]] };
         store.TimeoutVerification = true;
-        Assert.AreEqual(1, await new AutomationWorker(retrySettings, store, _ => { }).RunAsync(true, default));
+        Assert.AreEqual(1, await new AutomationWorker(retrySettings, store, fixture.Signer, _ => { }).RunAsync(true, default));
         var pending = BundleJson.Read<AutomationState>(await File.ReadAllTextAsync(Path.Combine(retrySettings.StateDirectory, "schedule.json")));
         Assert.IsNotNull(pending.Jobs["working"].PendingFile);
         var state = BundleJson.Read<AutomationState>(await File.ReadAllTextAsync(Path.Combine(settings.StateDirectory, "schedule.json")));
         Assert.IsTrue(state.Jobs["broken"].NextAttemptUtc < state.Jobs["working"].NextAttemptUtc);
+    }
+
+    private sealed class StaticPublicKeySigner(byte[] publicKey) : IBundleSigner
+    {
+        public Task<byte[]> GetPublicKeyAsync(Guid keyId, CancellationToken token) => Task.FromResult(publicKey);
+        public Task SignAsync(Guid keyId, string inputPath, string outputPath, bool clearSign, CancellationToken token) =>
+            throw new NotSupportedException();
     }
 
     private sealed class ManualClock : TimeProvider

@@ -1,18 +1,19 @@
 using System.Text.RegularExpressions;
+using Aiursoft.AiurProtocol.Exceptions;
 using Aiursoft.AnduinOS.OfflineBundles.Core.Models;
 using Amazon.S3;
 using Amazon.Runtime;
 
 namespace Aiursoft.AnduinOS.OfflineBundles.Core.Services;
 
-public sealed class AutomationWorker(AutomationSettings settings, ICatalogStore store,
+public sealed class AutomationWorker(AutomationSettings settings, ICatalogStore store, IBundleSigner signer,
     Action<string> log, TimeProvider? time = null,
     Func<BuildProfile, string, SigningOptions, CancellationToken, Task<BuildResult>>? build = null)
 {
     private readonly TimeProvider _time = time ?? TimeProvider.System;
     private readonly CatalogPublisher _publisher = new(store, time);
     private readonly Func<BuildProfile, string, SigningOptions, CancellationToken, Task<BuildResult>> _build =
-        build ?? new BundleBuilder(log).BuildAsync;
+        build ?? new BundleBuilder(signer, log).BuildAsync;
 
     public async Task<int> RunAsync(bool once, CancellationToken token)
     {
@@ -21,7 +22,7 @@ public sealed class AutomationWorker(AutomationSettings settings, ICatalogStore 
         Directory.CreateDirectory(root);
         // Held for the entire lifetime, including waits. All invocations must share this local volume.
         await using var runLock = new FileStream(Path.Combine(root, "worker.lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
-        await BundleSigning.ValidateIdentityAsync(settings.Signing, settings.TrustedKeyringSha256, token);
+        await BundleSigning.ValidateIdentityAsync(settings.Signing, signer, settings.TrustedKeyringSha256, token);
         var stateFile = Path.Combine(root, "schedule.json");
         var state = File.Exists(stateFile) ? BundleJson.Read<AutomationState>(await File.ReadAllTextAsync(stateFile, token)) : new AutomationState();
         do
@@ -84,7 +85,9 @@ public sealed class AutomationWorker(AutomationSettings settings, ICatalogStore 
     }
 
     private static bool IsJobFailure(Exception error) => error is IOException or InvalidOperationException or ArgumentException or
-        UnauthorizedAccessException or System.Text.Json.JsonException or System.ComponentModel.Win32Exception or AmazonS3Exception or AmazonClientException or HttpRequestException or OperationCanceledException;
+        UnauthorizedAccessException or System.Text.Json.JsonException or System.ComponentModel.Win32Exception or AmazonS3Exception or
+        AmazonClientException or HttpRequestException or OperationCanceledException or
+        AiurHttpResponseException or AiurUnexpectedServerResponseException or AiurBadApiInputException;
 
     private static async Task SaveAsync(string file, AutomationState state, CancellationToken token)
     {
@@ -137,7 +140,8 @@ public sealed class AutomationWorker(AutomationSettings settings, ICatalogStore 
                 !Path.IsPathFullyQualified(job.Profile) || !Path.IsPathFullyQualified(job.Inputs) ||
                 string.IsNullOrWhiteSpace(job.Summary) || job.Summary.Length > 2000)
                 throw new ArgumentException("Jobs require a safe ID, absolute profile/input paths and a short summary.");
-        if (!Path.IsPathFullyQualified(value.Signing.Home) || !Path.IsPathFullyQualified(value.Signing.TrustedKeyring) || string.IsNullOrWhiteSpace(value.Signing.Key))
-            throw new ArgumentException("Configure absolute signing-home/keyring paths and a signing key.");
+        BundleSigning.ValidateEndpoint(value.Signing.Endpoint);
+        if (value.Signing.KeyId == Guid.Empty || !Path.IsPathFullyQualified(value.Signing.TrustedKeyring))
+            throw new ArgumentException("Configure an ESRP Sign HTTPS endpoint, non-empty key ID and absolute trusted keyring path.");
     }
 }

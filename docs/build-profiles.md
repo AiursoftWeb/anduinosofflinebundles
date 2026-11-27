@@ -43,7 +43,7 @@ The target version is read from `version_file` inside the authenticated candidat
 
 ## Signing and outputs
 
-Provide a controlled GnuPG home and signing-key identifier to `build`. Private keys are not copied into profiles, reports or bundles. Test keys are suitable only for development; the test suite generates its own temporary identities. `--keyring` supplies independently trusted public signing keys.
+Provide an ESRP Sign HTTPS endpoint (`--esrp-endpoint`), company signing key ID (`--esrp-key-id`), and runtime credentials (`ESRPSIGN_API_KEY` and `ESRPSIGN_KEY_PASSPHRASE`) to `build`. Private keys are never stored on the build host or copied into profiles, reports or bundles. `--keyring` supplies the independently trusted binary public signing key, which must match the public key served by ESRP Sign for `--esrp-key-id`.
 
 A successful build produces:
 

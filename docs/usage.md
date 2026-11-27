@@ -4,10 +4,15 @@ Supply a reviewed build profile, baseline package databases and externally trust
 
 For official Resolute/amd64 updates, see [the release profile and input layout](release-builds.md). Add `--inputs /path/to/inputs` to keep baseline files and source keys separate from the checkout. Target versions are read from signed package metadata; there is no manually maintained target-version argument.
 
+Signing is performed remotely through ESRP Sign (`ESRPSIGN_API_KEY` and `ESRPSIGN_KEY_PASSPHRASE` environment variables); private keys are never stored on the build host.
+
 ```sh
+export ESRPSIGN_API_KEY="..."
+export ESRPSIGN_KEY_PASSPHRASE="..."
+
 anduinos-offline-bundles build \
   --profile profiles/example-2.0-amd64.json --output ./dist/bundles \
-  --signing-home /path/to/controlled/gnupg --signing-key SIGNING_KEY_FINGERPRINT \
+  --esrp-endpoint https://esrp-sign.aiursoft.com --esrp-key-id SIGNING_KEY_GUID \
   --keyring /path/to/trusted-bundle-keys.gpg --json
 
 anduinos-offline-bundles verify --file update.atgz \
@@ -21,7 +26,7 @@ anduinos-offline-bundles inspect --file update.atgz \
   --status /path/to/baseline.status --os-release /path/to/baseline.os-release --json
 ```
 
-- **build** freezes authenticated APT indexes, simulates each baseline, downloads exact DEBs, creates a signed local repository, and validates each baseline using only that repository before producing an archive. Target version comes from `os-release` inside the resolved version package, normally `base-files`.
+- **build** validates that the ESRP Sign public key matches `--keyring`, freezes authenticated APT indexes, simulates each baseline, downloads exact DEBs, creates an ESRP-signed local repository, and validates each baseline using only that repository before producing an archive. Target version comes from `os-release` inside the resolved version package, normally `base-files`.
 - **verify** checks the manifest signature, archive boundaries, file sizes and hashes, repository signatures and package-index consistency. Trust comes from your external keyring, never from an archive-supplied key.
 - **inspect** verifies before showing metadata. With a status snapshot and its matching `os-release`, it also produces a local-only APT plan: `update-available`, `already-installed` or `blocked`.
 
@@ -52,7 +57,7 @@ dotnet build -c Release -p:GeneratePackageOnBuild=false
 dotnet test --no-restore
 dotnet pack -c Release --no-build --output ./dist/packages
 dotnet tool install Aiursoft.AnduinOS.OfflineBundles \
-  --tool-path ./dist/tools --add-source ./dist/packages --version 10.0.5
+  --tool-path ./dist/tools --add-source ./dist/packages --version 10.0.18
 ./dist/tools/anduinos-offline-bundles --help
 ```
 

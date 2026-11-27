@@ -34,6 +34,7 @@ inputs/
   keys/
     ubuntu-archive-keyring.gpg
     anduinos-archive-keyring.gpg
+    bundle-signing.gpg
   baselines/
     2.0.0.status
     2.0.0.os-release
@@ -60,16 +61,16 @@ Passing the original baseline closure check alone does not prove every intermedi
 
 ## Build
 
-From a checkout of this repository, with the tool installed:
+From a checkout of this repository, with the tool installed and `ESRPSIGN_API_KEY` / `ESRPSIGN_KEY_PASSPHRASE` exported:
 
 ```sh
 anduinos-offline-bundles build \
   --profile profiles/resolute-amd64.json \
   --inputs /srv/anduinos-offline/inputs \
   --output /srv/anduinos-offline/output \
-  --signing-home /path/to/controlled/gnupg \
-  --signing-key SIGNING_KEY_FINGERPRINT \
-  --keyring /path/to/trusted-bundle-keys.gpg \
+  --esrp-endpoint https://esrp-sign.aiursoft.com \
+  --esrp-key-id SIGNING_KEY_GUID \
+  --keyring /srv/anduinos-offline/inputs/keys/bundle-signing.gpg \
   --json
 ```
 

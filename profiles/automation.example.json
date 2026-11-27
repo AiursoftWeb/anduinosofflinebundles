@@ -3,8 +3,8 @@
   "bucket": "YOUR_BUCKET",
   "state_directory": "/data",
   "signing": {
-    "home": "/signing",
-    "key": "YOUR_PRODUCTION_SIGNING_FINGERPRINT",
+    "endpoint": "https://esrp-sign.aiursoft.com",
+    "key_id": "00000000-0000-0000-0000-000000000000",
     "trusted_keyring": "/inputs/keys/bundle-signing.gpg"
   },
   "interval_hours": 48,

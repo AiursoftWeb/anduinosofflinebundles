@@ -6,12 +6,17 @@ using Aiursoft.AnduinOS.OfflineBundles.Core.Models;
 
 namespace Aiursoft.AnduinOS.OfflineBundles.Core.Services;
 
-public sealed class BundleBuilder(Action<string>? progress = null)
+public sealed class BundleBuilder(IBundleSigner signer, Action<string>? progress = null)
 {
     public async Task<BuildResult> BuildAsync(BuildProfile profile, string outputDirectory, SigningOptions signing,
         CancellationToken token = default)
     {
         ProfileReader.Validate(profile);
+        BundleSigning.ValidateEndpoint(signing.Endpoint);
+        if (signing.KeyId == Guid.Empty)
+        {
+            throw new ArgumentException("A non-empty ESRP Sign key ID is required.", nameof(signing));
+        }
         outputDirectory = Path.GetFullPath(outputDirectory);
         Directory.CreateDirectory(outputDirectory);
         var work = Path.Combine(outputDirectory, ".build-" + Guid.NewGuid().ToString("N"));
@@ -180,7 +185,7 @@ public sealed class BundleBuilder(Action<string>? progress = null)
             };
             BundleArchive.ValidateManifest(manifest);
             await File.WriteAllTextAsync(Path.Combine(root, "manifest.json"), BundleJson.Write(manifest), token);
-            await BundleSigning.SignAsync(Path.Combine(root, "manifest.json"), Path.Combine(root, "manifest.asc"), signing, false, token);
+            await signer.SignAsync(signing.KeyId, Path.Combine(root, "manifest.json"), Path.Combine(root, "manifest.asc"), false, token);
             var destinationFile = Path.Combine(outputDirectory, $"AnduinOS-{targetVersion}-{profile.Architecture}-{batchId[..16]}.atgz");
             if (File.Exists(destinationFile))
             {
@@ -209,7 +214,7 @@ public sealed class BundleBuilder(Action<string>? progress = null)
                     }
                 }
                 var nativeVersions = new SortedDictionary<string, string>(StringComparer.Ordinal);
-                foreach (var tool in new[] { "apt-get", "apt-ftparchive", "dpkg-deb", "gpg", "gpgv" })
+                foreach (var tool in new[] { "apt-get", "apt-ftparchive", "dpkg-deb", "gpgv" })
                 {
                     var version = await NativeCommand.RunAsync(tool, ["--version"], cancellationToken: token);
                     nativeVersions[tool] = version.Output.Split('\n')[0];
@@ -318,7 +323,7 @@ public sealed class BundleBuilder(Action<string>? progress = null)
         throw new InvalidDataException($"The version package does not contain {versionFile}.");
     }
 
-    private static async Task WriteRepositoryAsync(string repository, string architecture, string suite,
+    private async Task WriteRepositoryAsync(string repository, string architecture, string suite,
         DateTimeOffset created, SigningOptions signing, CancellationToken token)
     {
         await using (var output = File.Create(Path.Combine(repository, "Packages")))
@@ -332,8 +337,8 @@ public sealed class BundleBuilder(Action<string>? progress = null)
             $" {await BundleJson.HashAsync(packages, token)} {new FileInfo(packages).Length} Packages\n";
         var releasePath = Path.Combine(repository, "Release");
         await File.WriteAllTextAsync(releasePath, release, token);
-        await BundleSigning.SignAsync(releasePath, Path.Combine(repository, "InRelease"), signing, true, token);
-        await BundleSigning.SignAsync(releasePath, Path.Combine(repository, "Release.gpg"), signing, false, token);
+        await signer.SignAsync(signing.KeyId, releasePath, Path.Combine(repository, "InRelease"), true, token);
+        await signer.SignAsync(signing.KeyId, releasePath, Path.Combine(repository, "Release.gpg"), false, token);
     }
 
     private static async Task<SortedDictionary<string, FileDigest>> InventoryAsync(string root, CancellationToken token)
